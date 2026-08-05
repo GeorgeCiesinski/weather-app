@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GaleSage</title>
+    <!--
+      FOUC prevention: set data-theme before first paint.
+      Must match ThemeProvider resolve rules (src/context/ThemeProvider.tsx):
+      localStorage key "theme"; light|dark apply as-is; system or missing/invalid
+      use prefers-color-scheme. ThemeProvider owns updates after React hydrates.
+    -->
     <script>
       (function () {
         try {

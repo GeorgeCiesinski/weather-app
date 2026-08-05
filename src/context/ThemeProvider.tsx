@@ -3,6 +3,10 @@
  *
  * Exposes a ThemeProvider that owns the theme preference. Keeping the state in
  * one provider ensures every consumer (header theme menu, settings, etc.) stays in sync.
+ *
+ * Theme resolution (localStorage key `theme`: light | dark | system; system and
+ * missing/invalid values use prefers-color-scheme) must stay in sync with the FOUC
+ * script in index.html, which applies data-theme before React loads.
  */
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
@@ -11,6 +15,9 @@ import type { ThemePreference, ResolvedTheme } from './ThemeContext';
 
 /**
  * Resolves a theme preference to the light/dark appearance to apply.
+ *
+ * Mirrors the FOUC script in index.html: light/dark apply as-is; system (and
+ * anything not light/dark at boot) follows the OS prefers-color-scheme.
  *
  * @param preference - The user's saved preference.
  * @returns The effective light or dark theme.
@@ -81,6 +88,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
   );
 }

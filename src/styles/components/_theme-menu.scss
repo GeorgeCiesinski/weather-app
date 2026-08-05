@@ -1,52 +1,9 @@
 /**
- * Theme menu control: circular trigger (resolved light/dark icons) + preference menu.
- *
- * Mobile: full-width menu under the button in settings.
- * Desktop (md+): compact popover anchored under the circular button.
+ * Theme-only trigger icon animations for PreferenceMenu icon variant.
  */
 
-@use '../mixins/breakpoints' as *;
-
 .theme-menu {
-  position: relative;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-
-  &__button {
-    position: relative;
-    flex: 0 0 auto;
-    width: 3rem;
-    height: 3rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    border: 1px solid var(--color-border);
-    border-radius: 50%;
-    background-color: transparent;
-    color: var(--theme-icon);
-    overflow: hidden;
-    cursor: pointer;
-    transition:
-      background-color 0.2s ease,
-      transform 0.2s ease,
-      border-color 0.2s ease;
-
-    &:hover {
-      transform: scale(1.1);
-      border-color: var(--color-border-hov);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-primary-hover);
-      outline-offset: 2px;
-    }
-  }
-
-  &__icon {
+  .theme-menu__icon {
     position: absolute;
     inset: 0;
     display: flex;
@@ -59,28 +16,28 @@
       opacity 0.22s ease;
   }
 
-  &__icon--sun {
+  .theme-menu__icon--sun {
     color: var(--theme-icon);
     background-color: var(--theme-icon-background);
     transform: rotate(20deg) scale(1);
   }
 
-  &__icon--cloud {
+  .theme-menu__icon--cloud {
     color: var(--theme-icon-secondary);
     transform: translate(20%, 20%) scale(1.2);
   }
 
-  &__icon--stars {
+  .theme-menu__icon--stars {
     color: var(--theme-icon-secondary);
   }
 
-  &__icon--moon {
+  .theme-menu__icon--moon {
     color: var(--theme-icon);
     transform: rotate(-20deg) scale(0.85);
   }
 
   // Resolved light: sun + cloud visible
-  &__button--light {
+  .preference-menu__trigger--light {
     .theme-menu__icon--sun {
       opacity: 1;
       transform: rotate(0deg) scale(1.15);
@@ -92,7 +49,7 @@
   }
 
   // Resolved dark: moon + stars visible
-  &__button--dark {
+  .preference-menu__trigger--dark {
     .theme-menu__icon--stars {
       opacity: 1;
     }
@@ -102,66 +59,10 @@
       transform: rotate(0deg) scale(1);
     }
   }
-
-  &__menu {
-    list-style: none;
-    margin: 0;
-    padding: 0.25rem 0;
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid var(--color-border);
-    border-radius: 0.5rem;
-    background-color: var(--color-surface);
-    color: var(--color-text);
-  }
-
-  &__option {
-    display: block;
-    width: 100%;
-    min-height: 2.5rem;
-    margin: 0;
-    padding: 0.5rem 0.75rem;
-    border: none;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-
-    &:hover,
-    &:focus-visible {
-      background-color: var(--color-surface-hover);
-      outline: none;
-    }
-
-    &[aria-checked='true'] {
-      font-weight: 600;
-      color: var(--color-primary);
-    }
-  }
-
-  @include breakpoint(md) {
-    width: auto;
-    display: inline-flex;
-    align-items: stretch;
-
-    &__menu {
-      position: absolute;
-      top: calc(100% + 0.35rem);
-      right: 0;
-      z-index: 50;
-      width: auto;
-      min-width: 8.5rem;
-    }
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .theme-menu__icon {
+  .theme-menu .theme-menu__icon {
     transition: none;
-  }
-
-  .theme-menu__button:hover {
-    transform: none;
   }
 }
