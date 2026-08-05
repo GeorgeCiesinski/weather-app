@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Attribution from './components/Attribution';
 import Brand from './components/Brand';
-import ThemeToggle from './components/ThemeToggle';
+import ThemeMenu from './components/ThemeMenu';
 import WeatherForm from './components/WeatherForm';
 import WeatherDisplay from './components/WeatherDisplay';
 import LocationPicker from './components/LocationPicker';
@@ -502,7 +502,7 @@ export default function App() {
             </div>
             <div className="header-controls">
               <UnitGroupSelect />
-              <ThemeToggle />
+              <ThemeMenu />
             </div>
           </div>
         </div>

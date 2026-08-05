@@ -8,9 +8,15 @@
  */
 import { createContext } from 'react';
 
+export type ThemePreference = 'light' | 'dark' | 'system';
+export type ResolvedTheme = 'light' | 'dark';
+
 export type ThemeContextValue = {
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
+  /** User-chosen preference (saved to localStorage). */
+  theme: ThemePreference;
+  /** Effective light/dark appearance applied to the document. */
+  resolvedTheme: ResolvedTheme;
+  setTheme: (preference: ThemePreference) => void;
 };
 
 /**

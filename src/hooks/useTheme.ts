@@ -1,17 +1,18 @@
 /**
  * useTheme hook.
  *
- * Provides typed access to the active theme and toggle function from
- * ThemeContext, and guards against being called outside of a ThemeProvider.
+ * Provides typed access to the theme preference, resolved appearance, and
+ * setTheme function from ThemeContext, and guards against being called outside
+ * of a ThemeProvider.
  */
 import { useContext } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
 
 /**
- * Reads the current theme and toggle function from ThemeContext.
+ * Reads the theme preference, resolved appearance, and setTheme from ThemeContext.
  *
  * @throws If called outside of a ThemeProvider.
- * @returns The active theme and a function to toggle it.
+ * @returns The preference, resolved theme, and a function to set the preference.
  */
 export function useTheme() {
   const context = useContext(ThemeContext);
