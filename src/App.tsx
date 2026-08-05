@@ -7,11 +7,11 @@
 import { useState, useEffect, useRef } from 'react';
 import Attribution from './components/Attribution';
 import Brand from './components/Brand';
-import ThemeToggle from './components/ThemeToggle';
+import ThemeMenu from './components/ThemeMenu';
 import WeatherForm from './components/WeatherForm';
 import WeatherDisplay from './components/WeatherDisplay';
 import LocationPicker from './components/LocationPicker';
-import UnitGroupSelect from './components/UnitGroupSelect';
+import UnitGroupMenu from './components/UnitGroupMenu';
 import { searchLocations } from './api/geocodeClient';
 import { fetchWeatherByCoords } from './api/weatherClient';
 import { useUnitGroup } from './hooks/useUnitGroup';
@@ -501,8 +501,8 @@ export default function App() {
               </button>
             </div>
             <div className="header-controls">
-              <UnitGroupSelect />
-              <ThemeToggle />
+              <UnitGroupMenu />
+              <ThemeMenu />
             </div>
           </div>
         </div>

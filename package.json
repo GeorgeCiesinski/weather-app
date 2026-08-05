@@ -2,7 +2,7 @@
   "name": "galesage",
   "version": "1.0.0",
   "description": "A Weather forecast app with an integrated AI advisor.",
-  "author": "George Ciesinski",
+  "author": "",
   "scripts": {
     "dev": "vite",
     "vercel": "vercel dev",
@@ -19,7 +19,6 @@
     "validate": "npm run check && npm test"
   },
   "keywords": [],
-  "author": "",
   "license": "MIT",
   "type": "module",
   "devDependencies": {

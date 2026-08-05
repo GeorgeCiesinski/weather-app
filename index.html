@@ -4,6 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GaleSage</title>
+    <!--
+      FOUC prevention: set data-theme before first paint.
+      Must match ThemeProvider resolve rules (src/context/ThemeProvider.tsx):
+      localStorage key "theme"; light|dark apply as-is; system or missing/invalid
+      use prefers-color-scheme. ThemeProvider owns updates after React hydrates.
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var resolved =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.setAttribute('data-theme', resolved);
+        } catch (e) {
+          /* ignore storage errors during early boot */
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

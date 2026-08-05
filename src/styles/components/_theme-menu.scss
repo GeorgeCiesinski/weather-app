@@ -1,0 +1,68 @@
+/**
+ * Theme-only trigger icon animations for PreferenceMenu icon variant.
+ */
+
+.theme-menu {
+  .theme-menu__icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    opacity: 0;
+    transition:
+      transform 0.22s ease,
+      opacity 0.22s ease;
+  }
+
+  .theme-menu__icon--sun {
+    color: var(--theme-icon);
+    background-color: var(--theme-icon-background);
+    transform: rotate(20deg) scale(1);
+  }
+
+  .theme-menu__icon--cloud {
+    color: var(--theme-icon-secondary);
+    transform: translate(20%, 20%) scale(1.2);
+  }
+
+  .theme-menu__icon--stars {
+    color: var(--theme-icon-secondary);
+  }
+
+  .theme-menu__icon--moon {
+    color: var(--theme-icon);
+    transform: rotate(-20deg) scale(0.85);
+  }
+
+  // Resolved light: sun + cloud visible
+  .preference-menu__trigger--light {
+    .theme-menu__icon--sun {
+      opacity: 1;
+      transform: rotate(0deg) scale(1.15);
+    }
+
+    .theme-menu__icon--cloud {
+      opacity: 1;
+    }
+  }
+
+  // Resolved dark: moon + stars visible
+  .preference-menu__trigger--dark {
+    .theme-menu__icon--stars {
+      opacity: 1;
+    }
+
+    .theme-menu__icon--moon {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-menu .theme-menu__icon {
+    transition: none;
+  }
+}

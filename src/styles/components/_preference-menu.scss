@@ -1,0 +1,151 @@
+/**
+ * Shared preference menu shell styles for theme and unit-group controls.
+ *
+ * Mobile: full-width list under the trigger in settings.
+ * Desktop (md+): compact popover under the control; equal 3rem trigger height
+ * keeps panel tops aligned in the header row.
+ */
+
+@use '../mixins/breakpoints' as *;
+
+.preference-menu {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  &__trigger {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    height: 3rem;
+    margin: 0;
+    border: 1px solid var(--color-border);
+    background-color: transparent;
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      transform 0.2s ease,
+      border-color 0.2s ease;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary-hover);
+      outline-offset: 2px;
+    }
+  }
+
+  &__trigger--icon {
+    position: relative;
+    width: 3rem;
+    padding: 0;
+    border-radius: 50%;
+    color: var(--theme-icon);
+    overflow: hidden;
+
+    &:hover {
+      transform: scale(1.1);
+      border-color: var(--color-border-hov);
+    }
+  }
+
+  &__trigger--text {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+    border-radius: 0.25rem;
+    color: var(--color-text);
+    border-color: var(--color-border);
+
+    &:hover {
+      border-color: var(--color-border-hov);
+    }
+  }
+
+  &__trigger-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__chevron {
+    flex: 0 0 auto;
+    display: block;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-0.15rem) rotate(45deg);
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  &__option {
+    display: block;
+    width: 100%;
+    min-height: 2.5rem;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--color-surface-hover);
+      outline: none;
+    }
+
+    &[aria-checked='true'] {
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+  }
+
+  @include breakpoint(md) {
+    width: auto;
+    display: inline-flex;
+    align-items: stretch;
+
+    &__trigger--text {
+      width: auto;
+      min-width: 7.5rem;
+      color: var(--color-text-inverse);
+      border-color: currentColor;
+    }
+
+    &__list {
+      position: absolute;
+      top: calc(100% + 0.35rem);
+      right: 0;
+      z-index: 50;
+      width: auto;
+      min-width: 8.5rem;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preference-menu__trigger--icon:hover {
+    transform: none;
+  }
+}
