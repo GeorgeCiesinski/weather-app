@@ -4,7 +4,7 @@
  * Manages weather cards state (up to 3), handles search and refresh, and renders the header and results.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Attribution from './components/Attribution';
 import Brand from './components/Brand';
 import ThemeMenu from './components/ThemeMenu';
@@ -15,12 +15,16 @@ import UnitGroupMenu from './components/UnitGroupMenu';
 import { searchLocations } from './api/geocodeClient';
 import { fetchWeatherByCoords } from './api/weatherClient';
 import { useUnitGroup } from './hooks/useUnitGroup';
+import { useMediaQuery } from './hooks/useMediaQuery';
 import type { WeatherCard } from './types/weather';
 import type { LocationResult } from './types/location';
 import { attachFocusTrap } from './utils/focusTrap';
 
 /** Matches SCSS `md` (768px): below this, search/settings are full-screen overlays. */
 const MOBILE_OVERLAY_QUERY = '(max-width: 767px)';
+
+/** Matches SCSS `lg` (1024px): multi-card grid; below, only the active pager card mounts. */
+const LG_UP_QUERY = '(min-width: 1024px)';
 
 /**
  * Renders the GaleSage page and coordinates weather card state with child components.
@@ -39,6 +43,7 @@ export default function App() {
   const [activeCardId, setActiveCardId] = useState<string | null>(null); // which location card the mobile pager shows; null when none
 
   const { unitGroup } = useUnitGroup();
+  const isLgUp = useMediaQuery(LG_UP_QUERY);
 
   // Skip the unitGroup effect on mount so we don't refetch before any cards exist.
   const isFirstRender = useRef(true);
@@ -241,11 +246,39 @@ export default function App() {
    *
    * @param id - Weather card id to refresh.
    */
-  function handleRefresh(id: string): void {
-    const card = cards.find((c) => c.id === id);
-    if (!card) return;
-    refetchCard(card);
-  }
+  const handleRefresh = useCallback(
+    (id: string): void => {
+      setCards((prev) => {
+        const card = prev.find((c) => c.id === id);
+        if (!card?.location) return prev;
+
+        const { lat, lon } = card.location;
+        void (async () => {
+          try {
+            const data = await fetchWeatherByCoords(lat, lon, unitGroup);
+            setCards((latest) => {
+              if (!latest.some((c) => c.id === id)) return latest;
+              return latest.map((c) =>
+                c.id === id ? { ...c, data, isLoading: false, error: null } : c,
+              );
+            });
+          } catch (error) {
+            console.error('Weather search failed:', error);
+            const message = error instanceof Error ? error.message : 'Weather request failed';
+            setCards((latest) => {
+              if (!latest.some((c) => c.id === id)) return latest;
+              return latest.map((c) =>
+                c.id === id ? { ...c, isLoading: false, error: message } : c,
+              );
+            });
+          }
+        })();
+
+        return prev.map((c) => (c.id === id ? { ...c, isLoading: true, error: null } : c));
+      });
+    },
+    [unitGroup],
+  );
 
   /**
    * Removes the weather card with the given id from the list.
@@ -255,22 +288,21 @@ export default function App() {
    *
    * @param id - Weather card id to remove.
    */
-  function handleRemove(id: string): void {
-    setCards((prev) => prev.filter((c) => c.id !== id));
+  const handleRemove = useCallback((id: string): void => {
+    setCards((prev) => {
+      const removedAt = prev.findIndex((c) => c.id === id);
+      const remaining = prev.filter((c) => c.id !== id);
 
-    setActiveCardId((current) => {
-      if (current !== id) return current; // removed a different card; keep selection
+      setActiveCardId((current) => {
+        if (current !== id) return current;
+        if (remaining.length === 0) return null;
+        const next = remaining[Math.min(Math.max(removedAt, 0), remaining.length - 1)];
+        return next.id;
+      });
 
-      // Active card was removed: pick a neighbor from the pre-remove list.
-      const remaining = cards.filter((c) => c.id !== id);
-      if (remaining.length === 0) return null;
-
-      const removedAt = cards.findIndex((c) => c.id === id);
-      // Prefer the card that slides into the same slot; otherwise the new last card.
-      const next = remaining[Math.min(removedAt, remaining.length - 1)];
-      return next.id;
+      return remaining;
     });
-  }
+  }, []);
 
   /**
    * Re-fetches every card when the user changes unit group.
@@ -374,6 +406,9 @@ export default function App() {
   // Pager position derived from activeCardId (not stored). -1 if id is missing/null.
   const activeCardIndex = cards.findIndex((c) => c.id === activeCardId);
   const safeActiveIndex = activeCardIndex >= 0 ? activeCardIndex : 0;
+
+  // Mobile/tablet: only the active location card mounts. Desktop lg+: all cards (grid).
+  const cardsToRender = isLgUp ? cards : cards.filter((card) => card.id === activeCardId);
 
   return (
     <>
@@ -580,9 +615,9 @@ export default function App() {
           </div>
         )}
 
-        {cards.length > 0 && (
+        {cardsToRender.length > 0 && (
           <div className="weather-cards">
-            {cards.map((card) => (
+            {cardsToRender.map((card) => (
               <WeatherDisplay
                 key={card.id}
                 card={card}

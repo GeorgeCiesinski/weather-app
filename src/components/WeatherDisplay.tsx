@@ -1,7 +1,7 @@
 /**
  * Location card with multi-day forecast carousel, Ask Advisor overlay, and refresh/remove controls.
  */
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { formatDayLabel } from '../utils/forecastFormatter';
 import { buildSlimAlerts } from '../utils/alertSummary';
 import {
@@ -12,7 +12,7 @@ import {
 import { fetchAdvice } from '../api/adviceClient';
 import { useUnitGroup } from '../hooks/useUnitGroup';
 import WeatherAlertsPanel from './WeatherAlertsPanel';
-import DayWeatherPanel from './DayWeatherPanel';
+import DayForecastCarousel from './DayForecastCarousel';
 import AdviceAdvisorOverlay from './AdviceAdvisorOverlay';
 import type { WeatherCard } from '../types/weather';
 import type { AdviceMessage, AdviceScope } from '../types/advice';
@@ -33,7 +33,8 @@ type WeatherDisplayProps = {
  *
  * Advisor chat lives in a per-card overlay opened via Ask Advisor. Session history
  * is kept for UI display only and is not sent to the AI. The overlay closes when the
- * mobile pager leaves this card (`isActive` true → false).
+ * mobile pager leaves this card (`isActive` true → false). Day panels live in a memoized
+ * DayForecastCarousel so advisor open/close does not re-render the day track.
  *
  * @param props - Component props.
  * @param props.card - Weather card state including location, forecast data, and loading/error flags.
@@ -43,12 +44,7 @@ type WeatherDisplayProps = {
  *   pager location shows. A true → false transition also closes the Ask Advisor overlay.
  * @returns The weather card UI.
  */
-export default function WeatherDisplay({
-  card,
-  onRefresh,
-  onRemove,
-  isActive = true,
-}: WeatherDisplayProps) {
+function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherDisplayProps) {
   const { id, query, location, data, isLoading, error } = card;
   const locationLabel = location?.displayName ?? query;
   const days = data?.days ?? [];
@@ -56,6 +52,7 @@ export default function WeatherDisplay({
 
   const advisorOverlayId = useId();
   const askAdvisorButtonRef = useRef<HTMLButtonElement>(null);
+  // Shared with DayForecastCarousel (controlled) for advisor day scope + refresh reset.
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [prevIsActive, setPrevIsActive] = useState(isActive);
@@ -66,10 +63,21 @@ export default function WeatherDisplay({
 
   const slimAlerts = buildSlimAlerts(data?.alerts ?? []);
   const seededText = buildSeededAdviceText(data?.description, slimAlerts.count);
+
+  // Keep day index valid when the forecast list shrinks (render-time adjustment).
+  const maxDayIndex = Math.max(days.length - 1, 0);
+  if (days.length > 0 && selectedDayIndex > maxDayIndex) {
+    setSelectedDayIndex(maxDayIndex);
+  }
+
   const selectedDayLabel =
-    days.length > 0
+    days.length > 0 && days[selectedDayIndex]
       ? formatDayLabel(selectedDayIndex, days[selectedDayIndex].datetime)
       : 'Selected day';
+
+  const handleSelectedDayChange = useCallback((index: number): void => {
+    setSelectedDayIndex(index);
+  }, []);
 
   // Restore focus to Ask Advisor after the overlay closes.
   useEffect(() => {
@@ -220,50 +228,11 @@ export default function WeatherDisplay({
             {days.length === 0 ? (
               <p>No forecast data available.</p>
             ) : (
-              <div className="day-carousel">
-                <div className="day-nav">
-                  <button
-                    type="button"
-                    className="day-nav-btn"
-                    onClick={() => setSelectedDayIndex((i) => i - 1)}
-                    disabled={selectedDayIndex === 0}
-                    aria-label="Previous day"
-                  >
-                    {'<'}
-                  </button>
-
-                  <span className="day-label">
-                    {formatDayLabel(selectedDayIndex, days[selectedDayIndex].datetime)}
-                  </span>
-
-                  <button
-                    type="button"
-                    className="day-nav-btn"
-                    onClick={() => setSelectedDayIndex((i) => i + 1)}
-                    disabled={selectedDayIndex === days.length - 1}
-                    aria-label="Next day"
-                  >
-                    {'>'}
-                  </button>
-                </div>
-
-                <div className="day-viewport">
-                  <div
-                    className="day-track"
-                    style={{ '--day-index': selectedDayIndex } as React.CSSProperties}
-                  >
-                    {days.map((day, index) => (
-                      <div
-                        className="day-slide"
-                        key={day.datetime}
-                        inert={index === selectedDayIndex ? undefined : true} // Sets non-selected days as inert so they're not interactable
-                      >
-                        <DayWeatherPanel day={day} isActive={index === selectedDayIndex} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <DayForecastCarousel
+                days={days}
+                selectedDayIndex={selectedDayIndex}
+                onSelectedDayChange={handleSelectedDayChange}
+              />
             )}
           </>
         )}
@@ -271,3 +240,5 @@ export default function WeatherDisplay({
     </div>
   );
 }
+
+export default memo(WeatherDisplay);
