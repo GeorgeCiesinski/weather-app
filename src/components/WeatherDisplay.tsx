@@ -2,6 +2,7 @@
  * Location card with multi-day forecast carousel, Ask Advisor overlay, and refresh/remove controls.
  */
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { formatDayLabel } from '../utils/forecastFormatter';
 import { buildSlimAlerts } from '../utils/alertSummary';
 import {
@@ -60,6 +61,20 @@ function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps
     refetch, // manual Refresh
   } = useWeatherQuery(lat, lon, unitGroup);
 
+  const {
+    mutateAsync: requestAdvice,
+    isPending: isAdviceLoading,
+    error: adviceMutationError,
+    reset: resetAdviceMutation,
+  } = useMutation({ mutationFn: fetchAdvice });
+
+  const adviceError =
+    adviceMutationError instanceof Error
+      ? adviceMutationError.message
+      : adviceMutationError
+        ? String(adviceMutationError)
+        : null;
+
   const days = data?.days ?? [];
   // Query's error is unknown/Error-shaped; UI wants a string.
   const weatherError = error instanceof Error ? error.message : error ? String(error) : null;
@@ -72,8 +87,6 @@ function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [prevIsActive, setPrevIsActive] = useState(isActive);
   const [history, setHistory] = useState<AdviceMessage[]>([]);
-  const [isAdviceLoading, setIsAdviceLoading] = useState(false);
-  const [adviceError, setAdviceError] = useState<string | null>(null);
   const wasAdvisorOpenRef = useRef(false);
 
   const slimAlerts = buildSlimAlerts(data?.alerts ?? []);
@@ -119,7 +132,7 @@ function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps
    */
   function clearAdviceSession(): void {
     setHistory([]);
-    setAdviceError(null);
+    resetAdviceMutation();
   }
 
   /**
@@ -150,8 +163,8 @@ function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps
     if (scope === 'day' && !data.days[selectedDayIndex]) return;
 
     setHistory((prev) => [...prev, { role: 'user', content: trimmed }]);
-    setIsAdviceLoading(true);
-    setAdviceError(null);
+
+    resetAdviceMutation(); // Clears previous error so UI isn't stuck on old failure
 
     const forecastDays =
       scope === 'location'
@@ -159,7 +172,7 @@ function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps
         : buildDayForecastDays(data.days[selectedDayIndex], unitGroup);
 
     try {
-      const answer = await fetchAdvice({
+      const answer = await requestAdvice({
         scope,
         location: locationName,
         question: trimmed,
@@ -168,10 +181,8 @@ function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps
         alerts: slimAlerts,
       });
       setHistory((prev) => [...prev, { role: 'assistant', content: answer }]);
-    } catch (err) {
-      setAdviceError(err instanceof Error ? err.message : 'Advice request failed');
-    } finally {
-      setIsAdviceLoading(false);
+    } catch {
+      // Error is already on adviceMutationError.
     }
   }
 

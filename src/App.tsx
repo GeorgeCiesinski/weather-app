@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import Attribution from './components/Attribution';
 import Brand from './components/Brand';
 import ThemeMenu from './components/ThemeMenu';
@@ -36,10 +37,13 @@ export default function App() {
   const [pendingLocations, setPendingLocations] = useState<LocationResult[]>([]);
   const [pendingQuery, setPendingQuery] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [isGeocoding, setIsGeocoding] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null); // which location card the mobile pager shows; null when none
+  
+  const { mutateAsync: geocodeSearch, isPending: isGeocoding } = useMutation({
+    mutationFn: searchLocations,
+  });
 
   const isLgUp = useMediaQuery(LG_UP_QUERY);
 
@@ -56,14 +60,14 @@ export default function App() {
    */
   async function handleSearch(searchTerm: string): Promise<void> {
     if (cards.length >= MAX_LOCATIONS) return;
+    if (isGeocoding) return; // ignore double submits while pending
 
     setFeedbackMessage('');
     setPendingLocations([]);
     setPendingQuery('');
-    setIsGeocoding(true);
 
     try {
-      const results = await searchLocations(searchTerm);
+      const results = await geocodeSearch(searchTerm);
 
       if (results.length === 0) {
         setFeedbackMessage('No locations found. Try a more specific search.');
@@ -79,8 +83,6 @@ export default function App() {
     } catch (error) {
       console.error('Geocoding failed:', error);
       setFeedbackMessage('Could not look up that location.');
-    } finally {
-      setIsGeocoding(false);
     }
   }
 
