@@ -64,7 +64,4 @@ export interface WeatherCard {
   id: string; // Random ID for react to differentiate cards
   query: string; // user's search term — used for refresh
   location: LocationResult | null;
-  data: WeatherData | null;
-  isLoading: boolean;
-  error: string | null;
 }

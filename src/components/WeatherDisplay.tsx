@@ -11,6 +11,7 @@ import {
 } from '../utils/adviceForecast';
 import { fetchAdvice } from '../api/adviceClient';
 import { useUnitGroup } from '../hooks/useUnitGroup';
+import { useWeatherQuery } from '../hooks/useWeatherQuery';
 import WeatherAlertsPanel from './WeatherAlertsPanel';
 import DayForecastCarousel from './DayForecastCarousel';
 import AdviceAdvisorOverlay from './AdviceAdvisorOverlay';
@@ -19,7 +20,6 @@ import type { AdviceMessage, AdviceScope } from '../types/advice';
 
 type WeatherDisplayProps = {
   card: WeatherCard;
-  onRefresh: (id: string) => void;
   onRemove: (id: string) => void;
   /**
    * When false on mobile/tablet, the card is hidden so only the active pager location shows.
@@ -37,19 +37,34 @@ type WeatherDisplayProps = {
  * DayForecastCarousel so advisor open/close does not re-render the day track.
  *
  * @param props - Component props.
- * @param props.card - Weather card state including location, forecast data, and loading/error flags.
- * @param props.onRefresh - Callback invoked when the user clicks Refresh (resets to today).
+ * @param props.card - Weather card location identity.
  * @param props.onRemove - Callback invoked with the card id when Remove is clicked.
  * @param props.isActive - When false on mobile/tablet, the card is hidden so only the active
  *   pager location shows. A true → false transition also closes the Ask Advisor overlay.
  * @returns The weather card UI.
  */
-function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherDisplayProps) {
-  const { id, query, location, data, isLoading, error } = card;
+function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps) {
+  // Identity
+  const { id, query, location } = card;
   const locationLabel = location?.displayName ?? query;
-  const days = data?.days ?? [];
   const { unitGroup } = useUnitGroup();
 
+  // Weather is server state: Query loads/caches it by lat, lon, and unitGroup
+  const lat = location?.lat ?? null;
+  const lon = location?.lon ?? null;
+  const {
+    data, // WeatherData | undefined
+    error, // Error | null
+    isPending, // first load for this key, no data yet
+    isFetching, // any network activity (first load or refresh)
+    refetch, // manual Refresh
+  } = useWeatherQuery(lat, lon, unitGroup);
+
+  const days = data?.days ?? [];
+  // Query's error is unknown/Error-shaped; UI wants a string.
+  const weatherError = error instanceof Error ? error.message : error ? String(error) : null;
+
+  // Advisor state
   const advisorOverlayId = useId();
   const askAdvisorButtonRef = useRef<HTMLButtonElement>(null);
   // Shared with DayForecastCarousel (controlled) for advisor day scope + refresh reset.
@@ -170,11 +185,11 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
             setSelectedDayIndex(0);
             setIsAdvisorOpen(false);
             clearAdviceSession();
-            onRefresh(id);
+            void refetch(); // local Query refetch
           }}
-          disabled={isLoading}
+          disabled={isFetching}
         >
-          {isLoading && data ? 'Refreshing...' : 'Refresh'}
+          {isFetching && data ? 'Refreshing...' : 'Refresh'}
         </button>
         <button
           type="button"
@@ -188,8 +203,8 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
 
       {location && <h2 className="location">{location.displayName}</h2>}
 
-      {error && <p className="error">{error}</p>}
-      {isLoading && !data && <p>Loading weather for {locationLabel}...</p>}
+      {weatherError && <p className="error">{weatherError}</p>}
+      {isPending && !data && <p>Loading weather for {locationLabel}...</p>}
 
       <div className="weather-display__body">
         {data && (
