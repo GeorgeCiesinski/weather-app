@@ -167,7 +167,7 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
         </div>
       </details>
 
-      <HourlyForecast hours={day.hours} />
+      {isActive ? <HourlyForecast hours={day.hours} /> : null}
     </div>
   );
 }

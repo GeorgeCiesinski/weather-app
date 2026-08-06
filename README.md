@@ -14,7 +14,7 @@ View the live app at [galesage.app](https://galesage.app).
 - Weather alerts when they are available for a location
 - AI Weather Advisor for location-wide or per-day questions
 - Unit preferences: metric, US, UK, and base
-- Light and dark theme toggle
+- Light, dark, and system theme menu
 
 ## Weather Advisor
 
