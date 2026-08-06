@@ -62,6 +62,7 @@ export interface WeatherData {
 
 export interface WeatherCard {
   id: string; // Random ID for react to differentiate cards
-  query: string; // user's search term — used for refresh
+  /** Original search text; label fallback when displayName is missing. */
+  query: string;
   location: LocationResult | null;
 }

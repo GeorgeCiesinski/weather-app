@@ -1,9 +1,9 @@
 /**
  * Root React component for the GaleSage app.
  *
- * Manages weather cards state (up to 3), handles search and location cards, and renders the header and results.
+ * Manages up to three location cards (identity only: id, query, location). Geocode search
+ * runs as a TanStack mutation; forecast data is loaded in WeatherDisplay via useWeatherQuery.
  */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import Attribution from './components/Attribution';
@@ -40,7 +40,8 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null); // which location card the mobile pager shows; null when none
-  
+
+  // Search on submit: mutation owns pending state; results drive add-card or location picker.
   const { mutateAsync: geocodeSearch, isPending: isGeocoding } = useMutation({
     mutationFn: searchLocations,
   });
@@ -54,7 +55,8 @@ export default function App() {
   const menuOverlayRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Creates a new weather card for the given search term, up to a maximum of 3 locations.
+   * Geocodes the search term (mutation), then adds a card or opens the disambiguation picker.
+   * Does not fetch weather; WeatherDisplay loads the forecast for each card's location.
    *
    * @param searchTerm - The location name entered by the user.
    */

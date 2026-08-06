@@ -35,6 +35,7 @@ For local development, Vercel environment variables, GitHub Actions deploy secre
 - [React](https://react.dev/)
 - [Vite](https://vite.dev/)
 - [Vitest](https://vitest.dev/)
+- [TanStack Query](https://tanstack.com/query) for client weather cache and geocode/advice mutations
 - [Vercel](https://vercel.com/) for serverless APIs and hosting
 - [Vercel AI](https://sdk.vercel.ai/) Gateway for the Weather Advisor
 
@@ -43,7 +44,7 @@ For local development, Vercel environment variables, GitHub Actions deploy secre
 - [Nominatim](https://nominatim.org/) for searching OpenStreetMap
 - [Visual Crossing](https://www.visualcrossing.com/) for weather data
 
-## attribution
+## Attribution
 
 - [OpenStreetMap](https://www.openstreetmap.org/copyright) provides the location data for geocoding
 

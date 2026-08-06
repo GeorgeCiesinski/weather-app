@@ -53,13 +53,7 @@ function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps
   // Weather is server state: Query loads/caches it by lat, lon, and unitGroup
   const lat = location?.lat ?? null;
   const lon = location?.lon ?? null;
-  const {
-    data, // WeatherData | undefined
-    error, // Error | null
-    isPending, // first load for this key, no data yet
-    isFetching, // any network activity (first load or refresh)
-    refetch, // manual Refresh
-  } = useWeatherQuery(lat, lon, unitGroup);
+  const { data, error, isPending, isFetching, refetch } = useWeatherQuery(lat, lon, unitGroup);
 
   const {
     mutateAsync: requestAdvice,
@@ -128,7 +122,7 @@ function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps
   }
 
   /**
-   * Clears chat history and advice error for this card.
+   * Clears chat history and resets the advice mutation (pending/error) for this card.
    */
   function clearAdviceSession(): void {
     setHistory([]);
