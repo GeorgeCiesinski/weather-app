@@ -6,6 +6,7 @@
 
 import { createRoot } from 'react-dom/client';
 import { StrictMode } from 'react';
+import { QueryProvider } from './context/QueryProvider';
 import App from './App';
 import { ThemeProvider } from './context/ThemeProvider';
 import { UnitGroupProvider } from './context/UnitGroupProvider';
@@ -19,10 +20,12 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ThemeProvider>
-      <UnitGroupProvider>
-        <App />
-      </UnitGroupProvider>
-    </ThemeProvider>
+    <QueryProvider>
+      <ThemeProvider>
+        <UnitGroupProvider>
+          <App />
+        </UnitGroupProvider>
+      </ThemeProvider>
+    </QueryProvider>
   </StrictMode>,
 );
