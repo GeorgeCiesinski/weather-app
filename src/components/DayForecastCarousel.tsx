@@ -4,6 +4,9 @@
  *
  * Swipe uses a 2–3 slide track. After leaving day 0 the active slot stays at 1, so navigation
  * animates the slot first (1→2 or 1→0), then recenters the window with transitions disabled.
+ *
+ * At rest, track/slot derive from selectedDayIndex. While swiping, a local anim snapshot freezes
+ * the old track center and target slot until transitionend recenters without reverse animation.
  */
 import { memo, useEffect, useLayoutEffect, useState } from 'react';
 import type { CSSProperties, TransitionEvent } from 'react';
@@ -17,7 +20,11 @@ type DayForecastCarouselProps = {
   onSelectedDayChange: (index: number) => void;
 };
 
-type AnimDirection = 'next' | 'prev' | null;
+type AnimState = {
+  track: number;
+  slot: number;
+  direction: 'next' | 'prev';
+};
 
 /** Matches `.day-track` transition duration; used as a transitionend safety net. */
 const DAY_TRACK_TRANSITION_MS = 250;
@@ -34,20 +41,14 @@ function DayForecastCarousel({
   selectedDayIndex,
   onSelectedDayChange,
 }: DayForecastCarouselProps) {
-  // Track center used to build the ±1 window while animating.
-  const [trackIndex, setTrackIndex] = useState(selectedDayIndex);
-  const [slotIndex, setSlotIndex] = useState(selectedDayIndex > 0 ? 1 : 0);
+  // Non-null while a swipe is in progress: frozen track center + animated slot.
+  const [anim, setAnim] = useState<AnimState | null>(null);
   const [skipTransition, setSkipTransition] = useState(false);
-  const [animDirection, setAnimDirection] = useState<AnimDirection>(null);
 
-  const animating = animDirection !== null;
-
-  // Sync when parent changes selection outside our animation (e.g. refresh reset).
-  useEffect(() => {
-    if (animating) return;
-    setTrackIndex(selectedDayIndex);
-    setSlotIndex(selectedDayIndex > 0 ? 1 : 0);
-  }, [selectedDayIndex, animating]);
+  const trackIndex = anim?.track ?? selectedDayIndex;
+  const slotIndex = anim?.slot ?? (selectedDayIndex > 0 ? 1 : 0);
+  const animDirection = anim?.direction ?? null;
+  const animating = anim !== null;
 
   // After a no-transition recenter, re-enable transitions on the next frame.
   useLayoutEffect(() => {
@@ -58,8 +59,7 @@ function DayForecastCarousel({
     return () => cancelAnimationFrame(frameId);
   }, [skipTransition]);
 
-  const safeTrackIndex =
-    days.length === 0 ? 0 : Math.min(Math.max(trackIndex, 0), days.length - 1);
+  const safeTrackIndex = days.length === 0 ? 0 : Math.min(Math.max(trackIndex, 0), days.length - 1);
 
   const windowIndices: number[] = [];
   if (days.length > 0) {
@@ -68,18 +68,17 @@ function DayForecastCarousel({
     if (safeTrackIndex < days.length - 1) windowIndices.push(safeTrackIndex + 1);
   }
 
-  const recenterToIndex = (nextIndex: number): void => {
+  // Clear anim so track/slot derive from selectedDayIndex; skipTransition avoids reverse swipe.
+  const recenterToIndex = (): void => {
     setSkipTransition(true);
-    setTrackIndex(nextIndex);
-    setSlotIndex(nextIndex > 0 ? 1 : 0);
-    setAnimDirection(null);
+    setAnim(null);
   };
 
   // If transitionend is skipped (e.g. click during skipTransition), unlock controls.
   useEffect(() => {
     if (!animDirection) return;
     const timerId = window.setTimeout(() => {
-      recenterToIndex(selectedDayIndex);
+      recenterToIndex();
     }, ANIM_FALLBACK_MS);
     return () => window.clearTimeout(timerId);
   }, [animDirection, selectedDayIndex]);
@@ -91,7 +90,8 @@ function DayForecastCarousel({
 
   const commitInstant = (nextIndex: number): void => {
     onSelectedDayChange(nextIndex);
-    recenterToIndex(nextIndex);
+    setSkipTransition(true);
+    setAnim(null);
   };
 
   const handlePrev = (): void => {
@@ -104,8 +104,7 @@ function DayForecastCarousel({
       return;
     }
 
-    setAnimDirection('prev');
-    setSlotIndex(0);
+    setAnim({ track: safeTrackIndex, slot: 0, direction: 'prev' });
     onSelectedDayChange(nextIndex);
   };
 
@@ -118,10 +117,13 @@ function DayForecastCarousel({
       return;
     }
 
-    setAnimDirection('next');
     // Day 0 track is [0,1] with slot 0 → animate to 1.
     // Later days are [i-1,i,i+1] with slot 1 → animate to 2.
-    setSlotIndex(safeTrackIndex === 0 ? 1 : 2);
+    setAnim({
+      track: safeTrackIndex,
+      slot: safeTrackIndex === 0 ? 1 : 2,
+      direction: 'next',
+    });
     onSelectedDayChange(nextIndex);
   };
 
@@ -129,10 +131,7 @@ function DayForecastCarousel({
     if (e.target !== e.currentTarget || e.propertyName !== 'transform') return;
     if (!animDirection) return;
 
-    const nextIndex =
-      animDirection === 'next' ? safeTrackIndex + 1 : Math.max(safeTrackIndex - 1, 0);
-
-    recenterToIndex(nextIndex);
+    recenterToIndex();
   };
 
   return (
