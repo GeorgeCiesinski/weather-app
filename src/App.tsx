@@ -19,6 +19,7 @@ import { useMediaQuery } from './hooks/useMediaQuery';
 import type { WeatherCard } from './types/weather';
 import type { LocationResult } from './types/location';
 import { attachFocusTrap } from './utils/focusTrap';
+import { locationsMatch } from './utils/locationIdentity';
 
 /** Matches SCSS `md` (768px): below this, search/settings are full-screen overlays. */
 const MOBILE_OVERLAY_QUERY = '(max-width: 767px)';
@@ -197,14 +198,14 @@ export default function App() {
   /**
    * Creates a weather card for a resolved location and starts fetching its forecast.
    *
-   * Skips duplicates, sets `activeCardId` to the new card, clears the search input, and
-   * closes the search overlay on success.
+   * Skips duplicates by rounded lat/lon (not Nominatim place_id), sets `activeCardId`
+   * to the new card, clears the search input, and closes the search overlay on success.
    *
    * @param query - Original search text used to create the card.
    * @param location - Geocoded location to add.
    */
   function addLocationCard(query: string, location: LocationResult): void {
-    const isDuplicate = cards.some((c) => c.location?.placeId === location.placeId);
+    const isDuplicate = cards.some((c) => locationsMatch(c.location, location));
 
     if (isDuplicate) {
       setFeedbackMessage('That location is already listed.');
