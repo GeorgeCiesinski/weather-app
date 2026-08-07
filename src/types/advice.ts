@@ -54,6 +54,16 @@ export type SlimDayForecast = {
   solarenergy: string;
   uvindex: string;
   visibility: string;
+  /** Optional — Visual Crossing AQ coverage is limited (~5-day forecast). */
+  aqius?: string;
+  aqieur?: string;
+  pm1?: string;
+  pm2p5?: string;
+  pm10?: string;
+  o3?: string;
+  no2?: string;
+  so2?: string;
+  co?: string;
   /** Present only on day-scope advice payloads. */
   hours?: SlimHourForecast[];
 };

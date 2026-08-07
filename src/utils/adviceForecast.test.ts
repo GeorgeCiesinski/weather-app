@@ -142,6 +142,46 @@ describe('slimDay', () => {
     expect(slim.conditions).toBe('Snow');
     expect(slim.preciptype).toEqual(['snow', 'ice']);
   });
+
+  it('formats air quality fields when present', () => {
+    const slim = slimDay(
+      makeDay({
+        aqius: 42,
+        aqieur: 2,
+        pm1: 5.1,
+        pm2p5: 12.3,
+        pm10: 20,
+        o3: 30,
+        no2: 8,
+        so2: 1.5,
+        co: 200,
+      }),
+      'metric',
+    );
+
+    expect(slim.aqius).toBe('42 (Good)');
+    expect(slim.aqieur).toBe('2 (Low)');
+    expect(slim.pm1).toBe('5.1 µg/m³');
+    expect(slim.pm2p5).toBe('12.3 µg/m³');
+    expect(slim.pm10).toBe('20 µg/m³');
+    expect(slim.o3).toBe('30 µg/m³');
+    expect(slim.no2).toBe('8 µg/m³');
+    expect(slim.so2).toBe('1.5 µg/m³');
+    expect(slim.co).toBe('200 µg/m³');
+  });
+
+  it('omits air quality keys when source values are absent', () => {
+    const slim = slimDay(makeDay(), 'metric');
+    expect(slim).not.toHaveProperty('aqius');
+    expect(slim).not.toHaveProperty('aqieur');
+    expect(slim).not.toHaveProperty('pm1');
+    expect(slim).not.toHaveProperty('pm2p5');
+    expect(slim).not.toHaveProperty('pm10');
+    expect(slim).not.toHaveProperty('o3');
+    expect(slim).not.toHaveProperty('no2');
+    expect(slim).not.toHaveProperty('so2');
+    expect(slim).not.toHaveProperty('co');
+  });
 });
 
 describe('slimHour', () => {
