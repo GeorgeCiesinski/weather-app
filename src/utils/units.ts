@@ -4,6 +4,7 @@
  * Temp, precip, snow, wind, and visibility append unitGroup-specific suffixes.
  * Solar radiation and energy use fixed Visual Crossing units (W/m², MJ/m²).
  * UV index is unitless and formatted without a suffix.
+ * Air quality pollutants use µg/m³; US/EU AQI include category labels.
  */
 import { UnitGroup } from '../types/unitGroup';
 
@@ -130,4 +131,60 @@ export function formatVisibility(value: number, unitGroup: UnitGroup): string {
  */
 export function formatUvIndex(value: number): string {
   return `${value}`;
+}
+
+/**
+ * Maps a US EPA AQI value to its category label.
+ *
+ * @param value - US AQI as returned by the API (typically 0–300+).
+ * @returns EPA category name.
+ */
+function aqiUsCategory(value: number): string {
+  if (value <= 50) return 'Good';
+  if (value <= 100) return 'Moderate';
+  if (value <= 150) return 'Unhealthy for Sensitive Groups';
+  if (value <= 200) return 'Unhealthy';
+  if (value <= 300) return 'Very Unhealthy';
+  return 'Hazardous';
+}
+
+/**
+ * Formats a US AQI value with its EPA category.
+ *
+ * @param value - US EPA AQI number as returned by the API.
+ * @returns Formatted string, e.g. "42 (Good)".
+ */
+export function formatAqiUs(value: number): string {
+  return `${value} (${aqiUsCategory(value)})`;
+}
+
+/** European AQI labels keyed by index level 1–6. */
+const AQI_EUR_LABELS: Record<number, string> = {
+  1: 'Very Low',
+  2: 'Low',
+  3: 'Medium',
+  4: 'High',
+  5: 'Very High',
+  6: 'Extremely High',
+};
+
+/**
+ * Formats a European AQI value with a short severity label.
+ *
+ * @param value - European AQI number as returned by the API (1–6).
+ * @returns Formatted string, e.g. "2 (Low)".
+ */
+export function formatAqiEur(value: number): string {
+  const label = AQI_EUR_LABELS[value];
+  return label ? `${value} (${label})` : `${value}`;
+}
+
+/**
+ * Formats a pollutant concentration (always µg/m³ from Visual Crossing).
+ *
+ * @param value - Pollutant amount in µg/m³.
+ * @returns Formatted string.
+ */
+export function formatPollutant(value: number): string {
+  return `${value} µg/m³`;
 }

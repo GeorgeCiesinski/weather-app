@@ -1,7 +1,7 @@
 /**
  * Presentational component for a single day's forecast fields in open-by-default
- * collapsible groups (Conditions, Precipitation, Atmospheric Conditions, Sun),
- * plus an hourly forecast details section.
+ * collapsible groups (Conditions, Precipitation, Atmospheric Conditions, Sun,
+ * Air Quality), plus an hourly forecast details section.
  */
 import WindDirectionArrow from './WindDirectionArrow';
 import HourlyForecast from './HourlyForecast';
@@ -14,6 +14,9 @@ import {
   formatSolarEnergy,
   formatVisibility,
   formatUvIndex,
+  formatAqiUs,
+  formatAqiEur,
+  formatPollutant,
 } from '../utils/units';
 import { formatPrecipType, formatWindDir } from '../utils/forecastFormatter';
 import { getFallbackWeatherIconSrc, getWeatherIconSrc } from '../utils/weatherIcon';
@@ -25,6 +28,29 @@ type DayWeatherPanelProps = {
   isActive: boolean; // Controls aria-hidden for inactive carousel slides
 };
 
+/** Air quality field keys used to decide whether the AQ section has any data. */
+const AQ_FIELDS = [
+  'aqius',
+  'aqieur',
+  'pm1',
+  'pm2p5',
+  'pm10',
+  'o3',
+  'no2',
+  'so2',
+  'co',
+] as const satisfies readonly (keyof DailyWeather)[];
+
+/**
+ * Returns true when at least one air quality field is present on the day.
+ *
+ * @param day - Daily weather values for this slide.
+ * @returns Whether the Air Quality section should render.
+ */
+function hasAirQualityData(day: DailyWeather): boolean {
+  return AQ_FIELDS.some((key) => day[key] != null);
+}
+
 /**
  * Renders one day's forecast fields and hourly details.
  *
@@ -35,6 +61,7 @@ type DayWeatherPanelProps = {
  */
 export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps) {
   const { unitGroup } = useUnitGroup();
+  const showAirQuality = hasAirQualityData(day);
 
   return (
     <div className="day-weather-panel" aria-hidden={!isActive}>
@@ -166,6 +193,76 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
           </div>
         </div>
       </details>
+
+      {showAirQuality ? (
+        <details className="day-section day-section--air-quality" open>
+          <summary>Air Quality</summary>
+          <div className="day-section__body">
+            {day.aqius != null && (
+              <div className="aqi-us">
+                <h3>US AQI:</h3>
+                <span>{formatAqiUs(day.aqius)}</span>
+              </div>
+            )}
+
+            {day.aqieur != null && (
+              <div className="aqi-eur">
+                <h3>European AQI:</h3>
+                <span>{formatAqiEur(day.aqieur)}</span>
+              </div>
+            )}
+
+            {day.pm1 != null && (
+              <div className="pm1">
+                <h3>{`PM1 (Particles < ~1 µm):`}</h3>
+                <span>{formatPollutant(day.pm1)}</span>
+              </div>
+            )}
+
+            {day.pm2p5 != null && (
+              <div className="pm2p5">
+                <h3>{`PM2.5 (Particles ≤ ~2.5 µm):`}</h3>
+                <span>{formatPollutant(day.pm2p5)}</span>
+              </div>
+            )}
+
+            {day.pm10 != null && (
+              <div className="pm10">
+                <h3>{`PM10 (Particles ≤ ~10 µm):`}</h3>
+                <span>{formatPollutant(day.pm10)}</span>
+              </div>
+            )}
+
+            {day.o3 != null && (
+              <div className="o3">
+                <h3>Ozone (O₃):</h3>
+                <span>{formatPollutant(day.o3)}</span>
+              </div>
+            )}
+
+            {day.no2 != null && (
+              <div className="no2">
+                <h3>Nitrogen Dioxide (NO₂):</h3>
+                <span>{formatPollutant(day.no2)}</span>
+              </div>
+            )}
+
+            {day.so2 != null && (
+              <div className="so2">
+                <h3>Sulphur Dioxide (SO₂):</h3>
+                <span>{formatPollutant(day.so2)}</span>
+              </div>
+            )}
+
+            {day.co != null && (
+              <div className="co">
+                <h3>Carbon Monoxide (CO):</h3>
+                <span>{formatPollutant(day.co)}</span>
+              </div>
+            )}
+          </div>
+        </details>
+      ) : null}
 
       {isActive ? <HourlyForecast hours={day.hours} /> : null}
     </div>

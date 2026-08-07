@@ -37,6 +37,24 @@ export interface DailyWeather {
   solarenergy: number; // MJ/m², daily sum of hourly energy
   uvindex: number; // typically 0–10+, daily max of hourly
   visibility: number; // km or mi depending on unitGroup
+  /** US EPA AQI (0–300+); optional — VC covers ~5-day forecast only */
+  aqius?: number;
+  /** European AQI (1–6); optional — VC covers ~5-day forecast only */
+  aqieur?: number;
+  /** Particulate matter <1 µm (µg/m³) */
+  pm1?: number;
+  /** Particulate matter <2.5 µm (µg/m³) */
+  pm2p5?: number;
+  /** Particulate matter <10 µm (µg/m³) */
+  pm10?: number;
+  /** Ground-level ozone (µg/m³) */
+  o3?: number;
+  /** Nitrogen dioxide (µg/m³) */
+  no2?: number;
+  /** Sulphur dioxide (µg/m³) */
+  so2?: number;
+  /** Carbon monoxide (µg/m³) */
+  co?: number;
   hours?: HourlyWeather[];
 }
 
@@ -51,6 +69,15 @@ export interface HourlyWeather {
   preciptype?: string[];
   windspeed: number;
   winddir: number;
+  aqius?: number;
+  aqieur?: number;
+  pm1?: number;
+  pm2p5?: number;
+  pm10?: number;
+  o3?: number;
+  no2?: number;
+  so2?: number;
+  co?: number;
 }
 
 export interface WeatherData {

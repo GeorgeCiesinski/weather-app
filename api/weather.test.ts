@@ -103,7 +103,7 @@ describe('weather API handler', () => {
 
     // Checks that the proxy builds the Visual Crossing request without leaking the key to the client.
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=us&key=test-api-key&contentType=json',
+      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=us&key=test-api-key&contentType=json&elements=%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco',
     );
   });
 
@@ -177,7 +177,7 @@ describe('weather API handler', () => {
     await handler(req, res);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=metric&key=test-api-key&contentType=json',
+      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=metric&key=test-api-key&contentType=json&elements=%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco',
     );
   });
 
@@ -201,7 +201,7 @@ describe('weather API handler', () => {
     await handler(req, res);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=us&key=test-api-key&contentType=json',
+      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=us&key=test-api-key&contentType=json&elements=%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco',
     );
   });
 
@@ -225,7 +225,7 @@ describe('weather API handler', () => {
     await handler(req, res);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=uk&key=test-api-key&contentType=json',
+      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=uk&key=test-api-key&contentType=json&elements=%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco',
     );
   });
 
@@ -249,7 +249,7 @@ describe('weather API handler', () => {
     await handler(req, res);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=base&key=test-api-key&contentType=json',
+      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=base&key=test-api-key&contentType=json&elements=%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco',
     );
   });
 
@@ -272,7 +272,7 @@ describe('weather API handler', () => {
     await handler(req, res);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=metric&key=test-api-key&contentType=json',
+      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=metric&key=test-api-key&contentType=json&elements=%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco',
     );
   });
 
@@ -296,7 +296,7 @@ describe('weather API handler', () => {
     await handler(req, res);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=metric&key=test-api-key&contentType=json',
+      'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=metric&key=test-api-key&contentType=json&elements=%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco',
     );
   });
 });
