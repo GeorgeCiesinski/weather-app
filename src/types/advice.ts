@@ -54,7 +54,7 @@ export type SlimDayForecast = {
   solarenergy: string;
   uvindex: string;
   visibility: string;
-  /** Optional — Visual Crossing AQ coverage is limited (~5-day forecast). */
+  // Optional AQ strings (VC ~5-day coverage); omitted when absent in slimDay.
   aqius?: string;
   aqieur?: string;
   pm1?: string;

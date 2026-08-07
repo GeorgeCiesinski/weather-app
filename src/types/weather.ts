@@ -34,18 +34,18 @@ export interface DailyWeather {
   windspeed: number;
   winddir: number;
   visibility: number; // km or mi depending on unitGroup
-  /** Solar */
+  // Solar
   solarradiation: number; // W/m², mean for the day
   solarenergy: number; // MJ/m², daily sum of hourly energy
   uvindex: number; // typically 0–10+, daily max of hourly
-  /** Air Quality */
-  aqius?: number; // US EPA AQI (0–300+); optional — VC covers ~5-day forecast only
-  aqieur?: number; // European AQI (1–6); optional — VC covers ~5-day forecast only
+  // Air Quality (optional — VC covers ~5-day forecast only)
+  aqius?: number; // US EPA AQI (0–300+)
+  aqieur?: number; // European AQI (1–6)
   pm1?: number; // Particulate matter <1 µm (µg/m³)
   pm2p5?: number; // Particulate matter <2.5 µm (µg/m³)
   pm10?: number; // Particulate matter <10 µm (µg/m³)
   o3?: number; // Ground-level ozone (µg/m³)
-  no2?: number; // Nitrogen dioxide (µg/m³) 
+  no2?: number; // Nitrogen dioxide (µg/m³)
   so2?: number; // Sulphur dioxide (µg/m³)
   co?: number; // Carbon monoxide (µg/m³)
   hours?: HourlyWeather[];
@@ -62,6 +62,7 @@ export interface HourlyWeather {
   preciptype?: string[];
   windspeed: number;
   winddir: number;
+  // Optional air quality (same units as daily; ~5-day VC coverage)
   aqius?: number;
   aqieur?: number;
   pm1?: number;

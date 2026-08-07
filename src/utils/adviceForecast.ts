@@ -30,10 +30,11 @@ export function formatPercent(n: number): string {
 }
 
 /**
- * Maps optional air quality and omits keys if missing.
- * 
+ * Maps present air quality fields on a day into pre-formatted slim keys.
+ * Omits a key when the source value is null or undefined (VC ~5-day coverage).
+ *
  * @param day - Raw daily weather data.
- * @returns Optional air quality forecast.
+ * @returns Partial slim day fields for air quality only.
  */
 export function slimAirQuality(day: DailyWeather): Partial<SlimDayForecast> {
   return {
