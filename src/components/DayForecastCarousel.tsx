@@ -1,8 +1,15 @@
 /**
  * Windowed multi-day forecast carousel: mounts selected day ±1.
  * Day index is controlled by the parent so refresh/advisor can share selection without effects.
+ *
+ * Swipe uses a 2–3 slide track. After leaving day 0 the active slot stays at 1, so navigation
+ * animates the slot first (1→2 or 1→0), then recenters the window with transitions disabled.
+ *
+ * At rest, track/slot derive from selectedDayIndex. While swiping, a local anim snapshot freezes
+ * the old track center and target slot until transitionend recenters without reverse animation.
  */
-import { memo } from 'react';
+import { memo, useEffect, useLayoutEffect, useState } from 'react';
+import type { CSSProperties, TransitionEvent } from 'react';
 import { formatDayLabel } from '../utils/forecastFormatter';
 import DayWeatherPanel from './DayWeatherPanel';
 import type { DailyWeather } from '../types/weather';
@@ -12,6 +19,16 @@ type DayForecastCarouselProps = {
   selectedDayIndex: number;
   onSelectedDayChange: (index: number) => void;
 };
+
+type AnimState = {
+  track: number;
+  slot: number;
+  direction: 'next' | 'prev';
+};
+
+/** Matches `.day-track` transition duration; used as a transitionend safety net. */
+const DAY_TRACK_TRANSITION_MS = 250;
+const ANIM_FALLBACK_MS = DAY_TRACK_TRANSITION_MS + 50;
 
 /**
  * Renders prev/next day navigation and a track with at most three day slides.
@@ -24,17 +41,98 @@ function DayForecastCarousel({
   selectedDayIndex,
   onSelectedDayChange,
 }: DayForecastCarouselProps) {
-  if (days.length === 0) return null;
+  // Non-null while a swipe is in progress: frozen track center + animated slot.
+  const [anim, setAnim] = useState<AnimState | null>(null);
+  const [skipTransition, setSkipTransition] = useState(false);
 
-  const safeIndex = Math.min(Math.max(selectedDayIndex, 0), days.length - 1);
+  const trackIndex = anim?.track ?? selectedDayIndex;
+  const slotIndex = anim?.slot ?? (selectedDayIndex > 0 ? 1 : 0);
+  const animDirection = anim?.direction ?? null;
+  const animating = anim !== null;
+
+  // After a no-transition recenter, re-enable transitions on the next frame.
+  useLayoutEffect(() => {
+    if (!skipTransition) return;
+    const frameId = requestAnimationFrame(() => {
+      setSkipTransition(false);
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [skipTransition]);
+
+  const safeTrackIndex = days.length === 0 ? 0 : Math.min(Math.max(trackIndex, 0), days.length - 1);
 
   const windowIndices: number[] = [];
-  if (safeIndex > 0) windowIndices.push(safeIndex - 1);
-  windowIndices.push(safeIndex);
-  if (safeIndex < days.length - 1) windowIndices.push(safeIndex + 1);
+  if (days.length > 0) {
+    if (safeTrackIndex > 0) windowIndices.push(safeTrackIndex - 1);
+    windowIndices.push(safeTrackIndex);
+    if (safeTrackIndex < days.length - 1) windowIndices.push(safeTrackIndex + 1);
+  }
 
-  // Within a 2–3 slot track, place the current day under the viewport.
-  const activeSlotIndex = safeIndex > 0 ? 1 : 0;
+  // Clear anim so track/slot derive from selectedDayIndex; skipTransition avoids reverse swipe.
+  const recenterToIndex = (): void => {
+    setSkipTransition(true);
+    setAnim(null);
+  };
+
+  // If transitionend is skipped (e.g. click during skipTransition), unlock controls.
+  useEffect(() => {
+    if (!animDirection) return;
+    const timerId = window.setTimeout(() => {
+      recenterToIndex();
+    }, ANIM_FALLBACK_MS);
+    return () => window.clearTimeout(timerId);
+  }, [animDirection, selectedDayIndex]);
+
+  if (days.length === 0) return null;
+
+  const canGoPrev = selectedDayIndex > 0 && !animating;
+  const canGoNext = selectedDayIndex < days.length - 1 && !animating;
+
+  const commitInstant = (nextIndex: number): void => {
+    onSelectedDayChange(nextIndex);
+    setSkipTransition(true);
+    setAnim(null);
+  };
+
+  const handlePrev = (): void => {
+    if (!canGoPrev) return;
+    const nextIndex = safeTrackIndex - 1;
+
+    // Clicks during the post-animation recenter frame would snap with no transitionend.
+    if (skipTransition) {
+      commitInstant(nextIndex);
+      return;
+    }
+
+    setAnim({ track: safeTrackIndex, slot: 0, direction: 'prev' });
+    onSelectedDayChange(nextIndex);
+  };
+
+  const handleNext = (): void => {
+    if (!canGoNext) return;
+    const nextIndex = safeTrackIndex + 1;
+
+    if (skipTransition) {
+      commitInstant(nextIndex);
+      return;
+    }
+
+    // Day 0 track is [0,1] with slot 0 → animate to 1.
+    // Later days are [i-1,i,i+1] with slot 1 → animate to 2.
+    setAnim({
+      track: safeTrackIndex,
+      slot: safeTrackIndex === 0 ? 1 : 2,
+      direction: 'next',
+    });
+    onSelectedDayChange(nextIndex);
+  };
+
+  const handleTransitionEnd = (e: TransitionEvent<HTMLDivElement>): void => {
+    if (e.target !== e.currentTarget || e.propertyName !== 'transform') return;
+    if (!animDirection) return;
+
+    recenterToIndex();
+  };
 
   return (
     <div className="day-carousel">
@@ -42,20 +140,22 @@ function DayForecastCarousel({
         <button
           type="button"
           className="day-nav-btn"
-          onClick={() => onSelectedDayChange(safeIndex - 1)}
-          disabled={safeIndex === 0}
+          onClick={handlePrev}
+          disabled={!canGoPrev}
           aria-label="Previous day"
         >
           {'<'}
         </button>
 
-        <span className="day-label">{formatDayLabel(safeIndex, days[safeIndex].datetime)}</span>
+        <span className="day-label">
+          {formatDayLabel(selectedDayIndex, days[selectedDayIndex].datetime)}
+        </span>
 
         <button
           type="button"
           className="day-nav-btn"
-          onClick={() => onSelectedDayChange(safeIndex + 1)}
-          disabled={safeIndex === days.length - 1}
+          onClick={handleNext}
+          disabled={!canGoNext}
           aria-label="Next day"
         >
           {'>'}
@@ -65,11 +165,17 @@ function DayForecastCarousel({
       <div className="day-viewport">
         <div
           className="day-track"
-          style={{ '--day-index': activeSlotIndex } as React.CSSProperties}
+          style={
+            {
+              '--day-index': slotIndex,
+              ...(skipTransition ? { transition: 'none' } : null),
+            } as CSSProperties
+          }
+          onTransitionEnd={handleTransitionEnd}
         >
           {windowIndices.map((index) => {
             const day = days[index];
-            const isActive = index === safeIndex;
+            const isActive = index === selectedDayIndex;
             return (
               <div className="day-slide" key={day.datetime} inert={isActive ? undefined : true}>
                 <DayWeatherPanel day={day} isActive={isActive} />

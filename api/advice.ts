@@ -99,7 +99,7 @@ function buildSystemPrompt(scope: AdviceScope): string {
   return [
     'You are a concise weather adviser for a consumer weather app.',
     'Use only the supplied location, forecast JSON, and alerts.',
-    'Numeric values already include units (for example °C, mm, km/h, %). Do not invent units.',
+    'Numeric values already include units (for example °C, mm, km/h, %, AQI categories like "42 (Good)", pollutant µg/m³). Do not invent units.',
     'Do not invent alerts or weather data. If something is missing, say so briefly.',
     'You are not an official warning service; for severe weather, urge checking official sources.',
     'Keep answers short and practical.',

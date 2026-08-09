@@ -13,6 +13,9 @@ import {
   formatSolarEnergy,
   formatVisibility,
   formatUvIndex,
+  formatAqiUs,
+  formatAqiEur,
+  formatPollutant,
 } from './units';
 import { formatWindDir } from './forecastFormatter';
 
@@ -24,6 +27,27 @@ import { formatWindDir } from './forecastFormatter';
  */
 export function formatPercent(n: number): string {
   return `${n}%`;
+}
+
+/**
+ * Maps present air quality fields on a day into pre-formatted slim keys.
+ * Omits a key when the source value is null or undefined (VC ~5-day coverage).
+ *
+ * @param day - Raw daily weather data.
+ * @returns Partial slim day fields for air quality only.
+ */
+export function slimAirQuality(day: DailyWeather): Partial<SlimDayForecast> {
+  return {
+    ...(day.aqius != null && { aqius: formatAqiUs(day.aqius) }),
+    ...(day.aqieur != null && { aqieur: formatAqiEur(day.aqieur) }),
+    ...(day.pm1 != null && { pm1: formatPollutant(day.pm1) }),
+    ...(day.pm2p5 != null && { pm2p5: formatPollutant(day.pm2p5) }),
+    ...(day.pm10 != null && { pm10: formatPollutant(day.pm10) }),
+    ...(day.o3 != null && { o3: formatPollutant(day.o3) }),
+    ...(day.no2 != null && { no2: formatPollutant(day.no2) }),
+    ...(day.so2 != null && { so2: formatPollutant(day.so2) }),
+    ...(day.co != null && { co: formatPollutant(day.co) }),
+  };
 }
 
 /**
@@ -51,6 +75,7 @@ export function slimHour(hour: HourlyWeather, unitGroup: UnitGroup): SlimHourFor
  * Maps a DailyWeather day into a SlimDayForecast with unit-formatted strings.
  * Does not include hourly rows — use buildDayForecastDays for day-scope hours.
  * Solar radiation/energy use fixed units; UV index is unitless.
+ * Air quality fields are omitted when absent (VC ~5-day coverage).
  *
  * @param day - Raw daily weather data.
  * @param unitGroup - Unit group for temp, precip, snow, wind, and visibility suffixes.
@@ -75,10 +100,11 @@ export function slimDay(day: DailyWeather, unitGroup: UnitGroup): SlimDayForecas
     humidity: formatPercent(day.humidity),
     cloudcover: formatPercent(day.cloudcover),
     windspeed: formatWindSpeed(day.windspeed, unitGroup),
+    visibility: formatVisibility(day.visibility, unitGroup),
     solarradiation: formatSolarRadiation(day.solarradiation),
     solarenergy: formatSolarEnergy(day.solarenergy),
     uvindex: formatUvIndex(day.uvindex),
-    visibility: formatVisibility(day.visibility, unitGroup),
+    ...slimAirQuality(day),
   };
 }
 

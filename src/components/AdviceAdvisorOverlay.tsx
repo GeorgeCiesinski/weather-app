@@ -17,6 +17,7 @@ const LOCATION_PRESETS = [
   'Do I need an umbrella soon?',
   'Will it feel hot or cold?',
   'Anything I should watch for?',
+  'What is the air quality like?',
 ] as const;
 
 const DAY_PRESETS = [
@@ -25,6 +26,7 @@ const DAY_PRESETS = [
   'Do I need an umbrella this day?',
   'Will it feel hot or cold this day?',
   'Anything I should watch for this day?',
+  'What is the air quality like today?',
 ] as const;
 
 type AdviceAdvisorOverlayProps = {

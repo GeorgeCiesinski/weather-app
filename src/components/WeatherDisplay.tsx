@@ -2,6 +2,7 @@
  * Location card with multi-day forecast carousel, Ask Advisor overlay, and refresh/remove controls.
  */
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { formatDayLabel } from '../utils/forecastFormatter';
 import { buildSlimAlerts } from '../utils/alertSummary';
 import {
@@ -11,6 +12,7 @@ import {
 } from '../utils/adviceForecast';
 import { fetchAdvice } from '../api/adviceClient';
 import { useUnitGroup } from '../hooks/useUnitGroup';
+import { useWeatherQuery } from '../hooks/useWeatherQuery';
 import WeatherAlertsPanel from './WeatherAlertsPanel';
 import DayForecastCarousel from './DayForecastCarousel';
 import AdviceAdvisorOverlay from './AdviceAdvisorOverlay';
@@ -19,7 +21,6 @@ import type { AdviceMessage, AdviceScope } from '../types/advice';
 
 type WeatherDisplayProps = {
   card: WeatherCard;
-  onRefresh: (id: string) => void;
   onRemove: (id: string) => void;
   /**
    * When false on mobile/tablet, the card is hidden so only the active pager location shows.
@@ -37,19 +38,42 @@ type WeatherDisplayProps = {
  * DayForecastCarousel so advisor open/close does not re-render the day track.
  *
  * @param props - Component props.
- * @param props.card - Weather card state including location, forecast data, and loading/error flags.
- * @param props.onRefresh - Callback invoked when the user clicks Refresh (resets to today).
+ * @param props.card - Weather card location identity.
  * @param props.onRemove - Callback invoked with the card id when Remove is clicked.
  * @param props.isActive - When false on mobile/tablet, the card is hidden so only the active
  *   pager location shows. A true → false transition also closes the Ask Advisor overlay.
  * @returns The weather card UI.
  */
-function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherDisplayProps) {
-  const { id, query, location, data, isLoading, error } = card;
+function WeatherDisplay({ card, onRemove, isActive = true }: WeatherDisplayProps) {
+  // Identity
+  const { id, query, location } = card;
   const locationLabel = location?.displayName ?? query;
-  const days = data?.days ?? [];
   const { unitGroup } = useUnitGroup();
 
+  // Weather is server state: Query loads/caches it by lat, lon, and unitGroup
+  const lat = location?.lat ?? null;
+  const lon = location?.lon ?? null;
+  const { data, error, isPending, isFetching, refetch } = useWeatherQuery(lat, lon, unitGroup);
+
+  const {
+    mutateAsync: requestAdvice,
+    isPending: isAdviceLoading,
+    error: adviceMutationError,
+    reset: resetAdviceMutation,
+  } = useMutation({ mutationFn: fetchAdvice });
+
+  const adviceError =
+    adviceMutationError instanceof Error
+      ? adviceMutationError.message
+      : adviceMutationError
+        ? String(adviceMutationError)
+        : null;
+
+  const days = data?.days ?? [];
+  // Query's error is unknown/Error-shaped; UI wants a string.
+  const weatherError = error instanceof Error ? error.message : error ? String(error) : null;
+
+  // Advisor state
   const advisorOverlayId = useId();
   const askAdvisorButtonRef = useRef<HTMLButtonElement>(null);
   // Shared with DayForecastCarousel (controlled) for advisor day scope + refresh reset.
@@ -57,8 +81,6 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
   const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
   const [prevIsActive, setPrevIsActive] = useState(isActive);
   const [history, setHistory] = useState<AdviceMessage[]>([]);
-  const [isAdviceLoading, setIsAdviceLoading] = useState(false);
-  const [adviceError, setAdviceError] = useState<string | null>(null);
   const wasAdvisorOpenRef = useRef(false);
 
   const slimAlerts = buildSlimAlerts(data?.alerts ?? []);
@@ -100,11 +122,11 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
   }
 
   /**
-   * Clears chat history and advice error for this card.
+   * Clears chat history and resets the advice mutation (pending/error) for this card.
    */
   function clearAdviceSession(): void {
     setHistory([]);
-    setAdviceError(null);
+    resetAdviceMutation();
   }
 
   /**
@@ -135,8 +157,8 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
     if (scope === 'day' && !data.days[selectedDayIndex]) return;
 
     setHistory((prev) => [...prev, { role: 'user', content: trimmed }]);
-    setIsAdviceLoading(true);
-    setAdviceError(null);
+
+    resetAdviceMutation(); // Clears previous error so UI isn't stuck on old failure
 
     const forecastDays =
       scope === 'location'
@@ -144,7 +166,7 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
         : buildDayForecastDays(data.days[selectedDayIndex], unitGroup);
 
     try {
-      const answer = await fetchAdvice({
+      const answer = await requestAdvice({
         scope,
         location: locationName,
         question: trimmed,
@@ -153,10 +175,8 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
         alerts: slimAlerts,
       });
       setHistory((prev) => [...prev, { role: 'assistant', content: answer }]);
-    } catch (err) {
-      setAdviceError(err instanceof Error ? err.message : 'Advice request failed');
-    } finally {
-      setIsAdviceLoading(false);
+    } catch {
+      // Error is already on adviceMutationError.
     }
   }
 
@@ -170,11 +190,11 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
             setSelectedDayIndex(0);
             setIsAdvisorOpen(false);
             clearAdviceSession();
-            onRefresh(id);
+            void refetch(); // local Query refetch
           }}
-          disabled={isLoading}
+          disabled={isFetching}
         >
-          {isLoading && data ? 'Refreshing...' : 'Refresh'}
+          {isFetching && data ? 'Refreshing...' : 'Refresh'}
         </button>
         <button
           type="button"
@@ -188,8 +208,8 @@ function WeatherDisplay({ card, onRefresh, onRemove, isActive = true }: WeatherD
 
       {location && <h2 className="location">{location.displayName}</h2>}
 
-      {error && <p className="error">{error}</p>}
-      {isLoading && !data && <p>Loading weather for {locationLabel}...</p>}
+      {weatherError && <p className="error">{weatherError}</p>}
+      {isPending && !data && <p>Loading weather for {locationLabel}...</p>}
 
       <div className="weather-display__body">
         {data && (
