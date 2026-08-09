@@ -65,16 +65,55 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
 
   return (
     <div className="day-weather-panel" aria-hidden={!isActive}>
-      <div className="icon-wrapper">
-        <img
-          className="weather-icon"
-          src={getWeatherIconSrc(day.icon)}
-          alt={day.conditions}
-          onError={(e) => {
-            e.currentTarget.src = getFallbackWeatherIconSrc();
-          }}
-        />
+      <div className="info-wrapper">
+        <div className="temperature">
+          <div>
+            <span>
+              {formatTemp(day.temp, unitGroup)}<br/>
+            </span>
+            <span className="small-info">
+              {day.tempmin} - {formatTemp(day.tempmax, unitGroup)}
+            </span>
+          </div>
+          <div>
+            <h3>Feels like:</h3>
+            <span>
+              {formatTemp(day.feelslike, unitGroup)}
+            </span>
+            <span className="small-info">
+              {day.feelslikemin} - {formatTemp(day.feelslikemax, unitGroup)}
+            </span>
+          </div>
+        </div>
+        <div className="icon-wrapper">
+          <img
+            className="weather-icon"
+            src={getWeatherIconSrc(day.icon)}
+            alt={day.conditions}
+            onError={(e) => {
+              e.currentTarget.src = getFallbackWeatherIconSrc();
+            }}
+          />
+        </div>
+        <div className="precipitation">
+          <div>
+            <span>
+              {day.precipprob}%
+            </span>
+            <span className="small-info">
+              {day.preciptype === null
+                ? 'Precipitation'
+                : formatPrecipType(day.preciptype)}
+            </span>
+          </div>
+          <div>
+            <h3>Humidity:</h3>
+            <span>{day.humidity}%</span>
+          </div>
+        </div>
       </div>
+
+      {isActive ? <HourlyForecast hours={day.hours} /> : null}
 
       <details className="day-section day-section--conditions" open>
         <summary>Conditions</summary>
@@ -82,51 +121,21 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
           <div className="conditions">
             <span>{day.conditions}</span>
           </div>
-
-          <div className="temperature">
-            <h3>Temperature:</h3>
-            <span>
-              {formatTemp(day.temp, unitGroup)} (Max: {formatTemp(day.tempmax, unitGroup)} / Min:{' '}
-              {formatTemp(day.tempmin, unitGroup)})
-            </span>
-          </div>
-
-          <div className="feels-like">
-            <h3>Feels like:</h3>
-            <span>
-              {formatTemp(day.feelslike, unitGroup)} (Max: {formatTemp(day.feelslikemax, unitGroup)}{' '}
-              / Min: {formatTemp(day.feelslikemin, unitGroup)})
-            </span>
-          </div>
         </div>
       </details>
 
       <details className="day-section day-section--precipitation" open>
         <summary>Precipitation</summary>
         <div className="day-section__body">
-          <div className="precipitation">
-            <h3>Precipitation Type and Probability:</h3>
-            <span>
-              {day.precipprob}% chance of{' '}
-              {day.preciptype === null
-                ? 'Precipitation (type unknown)'
-                : formatPrecipType(day.preciptype)}
-            </span>
+          <div className="precipitation-amount">
+            <h3>Amount:</h3>
+            <span>{formatPrecip(day.precip, unitGroup)}</span>
           </div>
 
-          {day.precip > 0 && (
-            <div className="precipitation-amount">
-              <h3>Precipitation Amount:</h3>
-              <span>{formatPrecip(day.precip, unitGroup)}</span>
-            </div>
-          )}
-
-          {day.precipcover > 0 && (
-            <div className="precipitation-cover">
-              <h3>Proportion of Day it May Precipitate:</h3>
-              <span>{day.precipcover}%</span>
-            </div>
-          )}
+          <div className="precipitation-cover">
+            <h3>Proportion of Day it May Precipitate:</h3>
+            <span>{day.precipcover}%</span>
+          </div>
 
           {day.snow > 0 && (
             <div className="snow-today">
@@ -141,11 +150,6 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
               <span>{formatSnow(day.snowdepth, unitGroup)}</span>
             </div>
           )}
-
-          <div className="humidity">
-            <h3>Humidity:</h3>
-            <span>{day.humidity}%</span>
-          </div>
         </div>
       </details>
 
@@ -263,8 +267,6 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
           </div>
         </details>
       ) : null}
-
-      {isActive ? <HourlyForecast hours={day.hours} /> : null}
     </div>
   );
 }

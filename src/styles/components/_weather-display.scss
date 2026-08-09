@@ -238,10 +238,41 @@
     overflow-x: hidden; // clip overflow into slide
   }
 
-  .icon-wrapper {
+  .info-wrapper {
+    display: flex;
     align-self: center;
     border-radius: 1rem;
+    width:100%;
+  }
+
+  .icon-wrapper {
+    display: flex;
+    box-sizing: content-box;
+    background-color: skyblue;
+    align-self: center;
+    border: 2px solid black;
+    border-radius: 1rem;
     padding: 0.5rem;
+    opacity: 0.9;
+  }
+
+  .temperature,
+  .precipitation {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+    padding: 0.5rem;
+
+    div {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  .small-info {
+    font-size: 0.8rem;
   }
 
   .weather-icon {
