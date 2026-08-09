@@ -1,6 +1,6 @@
 /**
  * Presentational component for a single day's forecast fields in open-by-default
- * collapsible groups (Conditions, Precipitation, Atmospheric Conditions, Sun,
+ * collapsible groups (Summary, Precipitation, Atmospheric Conditions, Sun,
  * Air Quality), plus an hourly forecast details section.
  */
 import WindDirectionArrow from './WindDirectionArrow';
@@ -70,7 +70,8 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
           <div className="temperature">
             <div>
               <span>
-                {formatTemp(day.temp, unitGroup)}<br/>
+                {formatTemp(day.temp, unitGroup)}
+                <br />
               </span>
               <span className="small-info">
                 {day.tempmin} - {formatTemp(day.tempmax, unitGroup)}
@@ -78,9 +79,7 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
             </div>
             <div>
               <h3>Feels like:</h3>
-              <span>
-                {formatTemp(day.feelslike, unitGroup)}
-              </span>
+              <span>{formatTemp(day.feelslike, unitGroup)}</span>
               <span className="small-info">
                 {day.feelslikemin} - {formatTemp(day.feelslikemax, unitGroup)}
               </span>
@@ -98,13 +97,9 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
           </div>
           <div className="precipitation">
             <div>
-              <span>
-                {day.precipprob}%
-              </span>
+              <span>{day.precipprob}%</span>
               <span className="small-info">
-                {day.preciptype === null
-                  ? 'Precipitation'
-                  : formatPrecipType(day.preciptype)}
+                {day.preciptype === null ? 'Precipitation' : formatPrecipType(day.preciptype)}
               </span>
             </div>
             <div>
@@ -125,7 +120,7 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
       <details className="day-section day-section--conditions" open>
         <summary>Summary</summary>
         <div className="day-section__body">
-
+          <span>{day.description}</span>
         </div>
       </details>
 

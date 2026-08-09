@@ -243,24 +243,24 @@
     overflow-x: hidden; // clip overflow into slide
   }
 
-  .info-wrapper, {
+  .info-wrapper {
     display: flex;
     flex-direction: column;
     align-self: center;
     border-radius: 1rem;
-    width:100%;
+    width: 100%;
   }
 
   .info-wrapper__upper {
     display: flex;
     align-self: center;
     border-radius: 1rem;
-    width:100%;
+    width: 100%;
   }
 
   .conditions {
     font-weight: 800;
-    text-align: center
+    text-align: center;
   }
 
   .icon-wrapper {
@@ -382,7 +382,6 @@
 
   .hourly-forecast {
     margin-top: 0.5rem;
-    font-size: 0.85rem;
 
     summary {
       cursor: pointer;

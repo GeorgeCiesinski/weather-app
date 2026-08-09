@@ -29,6 +29,7 @@ function makeDay(overrides: Partial<DailyWeather> = {}): DailyWeather {
   return {
     datetime: '2026-07-15',
     conditions: 'Partly cloudy',
+    description: 'Partly cloudy throughout the day.',
     icon: 'partly-cloudy-day',
     temp: 22,
     tempmax: 28,

@@ -63,7 +63,8 @@ export default async function handler(req: WeatherRequest, res: WeatherResponse)
   }
 
   // Air quality is not in the default Timeline payload; + prefix adds elements.
-  const aqElements = '%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco';
+  const aqElements =
+    '%2Baqius%2C%2Baqieur%2C%2Bpm1%2C%2Bpm2p5%2C%2Bpm10%2C%2Bo3%2C%2Bno2%2C%2Bso2%2C%2Bco';
   const url = `${BASE_URL}/${lat},${lon}?unitGroup=${unitGroup}&key=${apiKey}&contentType=json&elements=${aqElements}`;
 
   const response = await fetch(url);

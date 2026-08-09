@@ -16,6 +16,7 @@ export interface WeatherAlert {
 export interface DailyWeather {
   datetime: string; // "YYYY-MM-DD"
   conditions: string; // per-day condition text
+  description: string; // per-day weather summary
   icon: string; // Visual Crossing icon id, maps to /weather-icons/{icon}.png
   temp: number;
   tempmax: number;
