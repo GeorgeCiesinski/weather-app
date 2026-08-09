@@ -8,6 +8,9 @@ import {
   formatSolarEnergy,
   formatVisibility,
   formatUvIndex,
+  formatAqiUs,
+  formatAqiEur,
+  formatPollutant,
 } from './units';
 
 describe('formatTemp', () => {
@@ -124,5 +127,48 @@ describe('formatUvIndex', () => {
   it('formats the unitless index value', () => {
     expect(formatUvIndex(8)).toBe('8');
     expect(formatUvIndex(0)).toBe('0');
+  });
+});
+
+describe('formatAqiUs', () => {
+  it.each([
+    [0, '0 (Good)'],
+    [50, '50 (Good)'],
+    [51, '51 (Moderate)'],
+    [100, '100 (Moderate)'],
+    [101, '101 (Unhealthy for Sensitive Groups)'],
+    [150, '150 (Unhealthy for Sensitive Groups)'],
+    [151, '151 (Unhealthy)'],
+    [200, '200 (Unhealthy)'],
+    [201, '201 (Very Unhealthy)'],
+    [300, '300 (Very Unhealthy)'],
+    [301, '301 (Hazardous)'],
+  ] as const)('formats %i with EPA category', (value, expected) => {
+    expect(formatAqiUs(value)).toBe(expected);
+  });
+});
+
+describe('formatAqiEur', () => {
+  it.each([
+    [1, '1 (Very Low)'],
+    [2, '2 (Low)'],
+    [3, '3 (Medium)'],
+    [4, '4 (High)'],
+    [5, '5 (Very High)'],
+    [6, '6 (Extremely High)'],
+  ] as const)('formats level %i with severity label', (value, expected) => {
+    expect(formatAqiEur(value)).toBe(expected);
+  });
+
+  it('formats unknown levels without a label', () => {
+    expect(formatAqiEur(0)).toBe('0');
+    expect(formatAqiEur(7)).toBe('7');
+  });
+});
+
+describe('formatPollutant', () => {
+  it('appends µg/m³', () => {
+    expect(formatPollutant(12.3)).toBe('12.3 µg/m³');
+    expect(formatPollutant(0)).toBe('0 µg/m³');
   });
 });

@@ -16,6 +16,7 @@ export interface WeatherAlert {
 export interface DailyWeather {
   datetime: string; // "YYYY-MM-DD"
   conditions: string; // per-day condition text
+  description: string; // per-day weather summary
   icon: string; // Visual Crossing icon id, maps to /weather-icons/{icon}.png
   temp: number;
   tempmax: number;
@@ -33,10 +34,21 @@ export interface DailyWeather {
   snowdepth: number; // Total snow depth
   windspeed: number;
   winddir: number;
+  visibility: number; // km or mi depending on unitGroup
+  // Solar
   solarradiation: number; // W/m², mean for the day
   solarenergy: number; // MJ/m², daily sum of hourly energy
   uvindex: number; // typically 0–10+, daily max of hourly
-  visibility: number; // km or mi depending on unitGroup
+  // Air Quality (optional — VC covers ~5-day forecast only)
+  aqius?: number; // US EPA AQI (0–300+)
+  aqieur?: number; // European AQI (1–6)
+  pm1?: number; // Particulate matter <1 µm (µg/m³)
+  pm2p5?: number; // Particulate matter <2.5 µm (µg/m³)
+  pm10?: number; // Particulate matter <10 µm (µg/m³)
+  o3?: number; // Ground-level ozone (µg/m³)
+  no2?: number; // Nitrogen dioxide (µg/m³)
+  so2?: number; // Sulphur dioxide (µg/m³)
+  co?: number; // Carbon monoxide (µg/m³)
   hours?: HourlyWeather[];
 }
 
@@ -51,6 +63,16 @@ export interface HourlyWeather {
   preciptype?: string[];
   windspeed: number;
   winddir: number;
+  // Optional air quality (same units as daily; ~5-day VC coverage)
+  aqius?: number;
+  aqieur?: number;
+  pm1?: number;
+  pm2p5?: number;
+  pm10?: number;
+  o3?: number;
+  no2?: number;
+  so2?: number;
+  co?: number;
 }
 
 export interface WeatherData {
@@ -62,9 +84,7 @@ export interface WeatherData {
 
 export interface WeatherCard {
   id: string; // Random ID for react to differentiate cards
-  query: string; // user's search term — used for refresh
+  /** Original search text; label fallback when displayName is missing. */
+  query: string;
   location: LocationResult | null;
-  data: WeatherData | null;
-  isLoading: boolean;
-  error: string | null;
 }

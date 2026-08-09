@@ -20,20 +20,6 @@ View the live app at [galesage.app](https://galesage.app).
 
 Ask about the next few days or a specific day in the forecast. Day questions include hourly detail; multi-day questions use daily summaries only. Answers are grounded in that location’s forecast data. The advisor uses the Vercel AI Gateway and the `openai/gpt-5-nano` model.
 
-## Technology
-
-- [TypeScript](https://www.typescriptlang.org/)
-- [React](https://react.dev/)
-- [Vite](https://vite.dev/)
-- [Vitest](https://vitest.dev/)
-- [Vercel](https://vercel.com/) for serverless APIs and hosting
-- [Vercel AI](https://sdk.vercel.ai/) Gateway for the Weather Advisor
-
-## APIs
-
-- [Nominatim](https://nominatim.org/) for searching OpenStreetMap
-- [Visual Crossing](https://www.visualcrossing.com/) for weather data
-
 ## Setup
 
 For local development, Vercel environment variables, GitHub Actions deploy secrets, and useful npm scripts, see [GETTING_STARTED.md](GETTING_STARTED.md).
@@ -43,10 +29,25 @@ For local development, Vercel environment variables, GitHub Actions deploy secre
 - Pull requests to `develop` and `main` run checks (ESLint, Prettier, type check, and tests) and build the app when those checks pass.
 - Merging to `main` deploys via GitHub Actions using `vercel build`. Vercel auto-deploy on `main` is disabled.
 
+## Technology
+
+- [TypeScript](https://www.typescriptlang.org/)
+- [React](https://react.dev/)
+- [Vite](https://vite.dev/)
+- [Vitest](https://vitest.dev/)
+- [TanStack Query](https://tanstack.com/query) for client weather cache and geocode/advice mutations
+- [Vercel](https://vercel.com/) for serverless APIs and hosting
+- [Vercel AI](https://sdk.vercel.ai/) Gateway for the Weather Advisor
+
+## APIs
+
+- [Nominatim](https://nominatim.org/) for searching OpenStreetMap
+- [Visual Crossing](https://www.visualcrossing.com/) for weather data
+
+## Attribution
+
+- [OpenStreetMap](https://www.openstreetmap.org/copyright) provides the location data for geocoding
+
 ## License
 
 - This project is published under the [MIT License](LICENSE.md).
-
-## attribution
-
-- [OpenStreetMap](https://www.openstreetmap.org/copyright) provides the location data for geocoding

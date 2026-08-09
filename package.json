@@ -23,6 +23,7 @@
   "type": "module",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tanstack/react-query-devtools": "^5.101.4",
     "@types/node": "^25.9.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -40,6 +41,7 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
     "ai": "^7.0.29",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

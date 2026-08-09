@@ -1,10 +1,11 @@
 /**
  * Root React component for the GaleSage app.
  *
- * Manages weather cards state (up to 3), handles search and refresh, and renders the header and results.
+ * Manages up to three location cards (identity only: id, query, location). Geocode search
+ * runs as a TanStack mutation; forecast data is loaded in WeatherDisplay via useWeatherQuery.
  */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import Attribution from './components/Attribution';
 import Brand from './components/Brand';
 import ThemeMenu from './components/ThemeMenu';
@@ -13,8 +14,6 @@ import WeatherDisplay from './components/WeatherDisplay';
 import LocationPicker from './components/LocationPicker';
 import UnitGroupMenu from './components/UnitGroupMenu';
 import { searchLocations } from './api/geocodeClient';
-import { fetchWeatherByCoords } from './api/weatherClient';
-import { useUnitGroup } from './hooks/useUnitGroup';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import type { WeatherCard } from './types/weather';
 import type { LocationResult } from './types/location';
@@ -38,16 +37,17 @@ export default function App() {
   const [pendingLocations, setPendingLocations] = useState<LocationResult[]>([]);
   const [pendingQuery, setPendingQuery] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [isGeocoding, setIsGeocoding] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeCardId, setActiveCardId] = useState<string | null>(null); // which location card the mobile pager shows; null when none
 
-  const { unitGroup } = useUnitGroup();
+  // Search on submit: mutation owns pending state; results drive add-card or location picker.
+  const { mutateAsync: geocodeSearch, isPending: isGeocoding } = useMutation({
+    mutationFn: searchLocations,
+  });
+
   const isLgUp = useMediaQuery(LG_UP_QUERY);
 
-  // Skip the unitGroup effect on mount so we don't refetch before any cards exist.
-  const isFirstRender = useRef(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchToggleRef = useRef<HTMLButtonElement>(null);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
@@ -55,46 +55,21 @@ export default function App() {
   const menuOverlayRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Fetches weather for a card and updates only the matching card by id.
-   *
-   * Uses the current unitGroup from context for the API request.
-   *
-   * @param id - Weather card id to update.
-   * @param lat - Location latitude.
-   * @param lon - Location longitude.
-   */
-  async function fetchWeatherForCard(id: string, lat: number, lon: number): Promise<void> {
-    try {
-      const data = await fetchWeatherByCoords(lat, lon, unitGroup);
-      setCards((prev) => {
-        if (!prev.some((c) => c.id === id)) return prev;
-        return prev.map((c) => (c.id === id ? { ...c, data, isLoading: false, error: null } : c));
-      });
-    } catch (error) {
-      console.error('Weather search failed:', error);
-      const message = error instanceof Error ? error.message : 'Weather request failed';
-      setCards((prev) => {
-        if (!prev.some((c) => c.id === id)) return prev;
-        return prev.map((c) => (c.id === id ? { ...c, isLoading: false, error: message } : c));
-      });
-    }
-  }
-
-  /**
-   * Creates a new weather card for the given search term and starts a fetch, up to a maximum of 3 locations.
+   * Geocodes the search term (mutation), then adds a card or opens the disambiguation picker.
+   * Does not fetch weather; WeatherDisplay loads the forecast for each card's location.
    *
    * @param searchTerm - The location name entered by the user.
    */
   async function handleSearch(searchTerm: string): Promise<void> {
     if (cards.length >= MAX_LOCATIONS) return;
+    if (isGeocoding) return; // ignore double submits while pending
 
     setFeedbackMessage('');
     setPendingLocations([]);
     setPendingQuery('');
-    setIsGeocoding(true);
 
     try {
-      const results = await searchLocations(searchTerm);
+      const results = await geocodeSearch(searchTerm);
 
       if (results.length === 0) {
         setFeedbackMessage('No locations found. Try a more specific search.');
@@ -110,8 +85,6 @@ export default function App() {
     } catch (error) {
       console.error('Geocoding failed:', error);
       setFeedbackMessage('Could not look up that location.');
-    } finally {
-      setIsGeocoding(false);
     }
   }
 
@@ -196,7 +169,7 @@ export default function App() {
   }
 
   /**
-   * Creates a weather card for a resolved location and starts fetching its forecast.
+   * Creates a location card for a resolved location.
    *
    * Skips duplicates by rounded lat/lon (not Nominatim place_id), sets `activeCardId`
    * to the new card, clears the search input, and closes the search overlay on success.
@@ -216,70 +189,13 @@ export default function App() {
       id: crypto.randomUUID(),
       query,
       location,
-      data: null,
-      isLoading: true,
-      error: null,
     };
 
     setCards((prev) => [...prev, newCard]);
     setActiveCardId(newCard.id);
-    fetchWeatherForCard(newCard.id, location.lat, location.lon);
     clearSearchInput();
     closeSearch({ restoreFocus: true });
   }
-
-  /**
-   * Marks a card as loading and re-fetches its weather using the current unit group.
-   *
-   * @param card - The weather card to refresh. Skipped if it has no location.
-   */
-  function refetchCard(card: WeatherCard): void {
-    if (!card.location) return;
-
-    setCards((prev) =>
-      prev.map((c) => (c.id === card.id ? { ...c, isLoading: true, error: null } : c)),
-    );
-    fetchWeatherForCard(card.id, card.location.lat, card.location.lon);
-  }
-
-  /**
-   * Re-fetches weather for the card with the given id using its stored coordinates.
-   *
-   * @param id - Weather card id to refresh.
-   */
-  const handleRefresh = useCallback(
-    (id: string): void => {
-      setCards((prev) => {
-        const card = prev.find((c) => c.id === id);
-        if (!card?.location) return prev;
-
-        const { lat, lon } = card.location;
-        void (async () => {
-          try {
-            const data = await fetchWeatherByCoords(lat, lon, unitGroup);
-            setCards((latest) => {
-              if (!latest.some((c) => c.id === id)) return latest;
-              return latest.map((c) =>
-                c.id === id ? { ...c, data, isLoading: false, error: null } : c,
-              );
-            });
-          } catch (error) {
-            console.error('Weather search failed:', error);
-            const message = error instanceof Error ? error.message : 'Weather request failed';
-            setCards((latest) => {
-              if (!latest.some((c) => c.id === id)) return latest;
-              return latest.map((c) =>
-                c.id === id ? { ...c, isLoading: false, error: message } : c,
-              );
-            });
-          }
-        })();
-
-        return prev.map((c) => (c.id === id ? { ...c, isLoading: true, error: null } : c));
-      });
-    },
-    [unitGroup],
-  );
 
   /**
    * Removes the weather card with the given id from the list.
@@ -304,20 +220,6 @@ export default function App() {
       return remaining;
     });
   }, []);
-
-  /**
-   * Re-fetches every card when the user changes unit group.
-   *
-   * Depends only on unitGroup; cards are read from the render when the preference changes.
-   */
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    cards.forEach((card) => refetchCard(card));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when unitGroup changes, not when cards change
-  }, [unitGroup]);
 
   // Focus the location input after the search overlay opens (mobile).
   useEffect(() => {
@@ -623,7 +525,6 @@ export default function App() {
                 key={card.id}
                 card={card}
                 isActive={card.id === activeCardId}
-                onRefresh={handleRefresh}
                 onRemove={handleRemove}
               />
             ))}

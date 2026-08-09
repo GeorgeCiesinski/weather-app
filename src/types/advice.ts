@@ -54,6 +54,16 @@ export type SlimDayForecast = {
   solarenergy: string;
   uvindex: string;
   visibility: string;
+  // Optional AQ strings (VC ~5-day coverage); omitted when absent in slimDay.
+  aqius?: string;
+  aqieur?: string;
+  pm1?: string;
+  pm2p5?: string;
+  pm10?: string;
+  o3?: string;
+  no2?: string;
+  so2?: string;
+  co?: string;
   /** Present only on day-scope advice payloads. */
   hours?: SlimHourForecast[];
 };
