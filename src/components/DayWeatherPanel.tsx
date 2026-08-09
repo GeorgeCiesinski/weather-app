@@ -66,49 +66,56 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
   return (
     <div className="day-weather-panel" aria-hidden={!isActive}>
       <div className="info-wrapper">
-        <div className="temperature">
-          <div>
-            <span>
-              {formatTemp(day.temp, unitGroup)}<br/>
-            </span>
-            <span className="small-info">
-              {day.tempmin} - {formatTemp(day.tempmax, unitGroup)}
-            </span>
+        <div className="info-wrapper__upper">
+          <div className="temperature">
+            <div>
+              <span>
+                {formatTemp(day.temp, unitGroup)}<br/>
+              </span>
+              <span className="small-info">
+                {day.tempmin} - {formatTemp(day.tempmax, unitGroup)}
+              </span>
+            </div>
+            <div>
+              <h3>Feels like:</h3>
+              <span>
+                {formatTemp(day.feelslike, unitGroup)}
+              </span>
+              <span className="small-info">
+                {day.feelslikemin} - {formatTemp(day.feelslikemax, unitGroup)}
+              </span>
+            </div>
           </div>
-          <div>
-            <h3>Feels like:</h3>
-            <span>
-              {formatTemp(day.feelslike, unitGroup)}
-            </span>
-            <span className="small-info">
-              {day.feelslikemin} - {formatTemp(day.feelslikemax, unitGroup)}
-            </span>
+          <div className="icon-wrapper">
+            <img
+              className="weather-icon"
+              src={getWeatherIconSrc(day.icon)}
+              alt={day.conditions}
+              onError={(e) => {
+                e.currentTarget.src = getFallbackWeatherIconSrc();
+              }}
+            />
+          </div>
+          <div className="precipitation">
+            <div>
+              <span>
+                {day.precipprob}%
+              </span>
+              <span className="small-info">
+                {day.preciptype === null
+                  ? 'Precipitation'
+                  : formatPrecipType(day.preciptype)}
+              </span>
+            </div>
+            <div>
+              <h3>Humidity:</h3>
+              <span>{day.humidity}%</span>
+            </div>
           </div>
         </div>
-        <div className="icon-wrapper">
-          <img
-            className="weather-icon"
-            src={getWeatherIconSrc(day.icon)}
-            alt={day.conditions}
-            onError={(e) => {
-              e.currentTarget.src = getFallbackWeatherIconSrc();
-            }}
-          />
-        </div>
-        <div className="precipitation">
-          <div>
-            <span>
-              {day.precipprob}%
-            </span>
-            <span className="small-info">
-              {day.preciptype === null
-                ? 'Precipitation'
-                : formatPrecipType(day.preciptype)}
-            </span>
-          </div>
-          <div>
-            <h3>Humidity:</h3>
-            <span>{day.humidity}%</span>
+        <div className="info-wrapper__lower">
+          <div className="conditions">
+            <span className="small-info">{day.conditions}</span>
           </div>
         </div>
       </div>
@@ -116,11 +123,9 @@ export default function DayWeatherPanel({ day, isActive }: DayWeatherPanelProps)
       {isActive ? <HourlyForecast hours={day.hours} /> : null}
 
       <details className="day-section day-section--conditions" open>
-        <summary>Conditions</summary>
+        <summary>Summary</summary>
         <div className="day-section__body">
-          <div className="conditions">
-            <span>{day.conditions}</span>
-          </div>
+
         </div>
       </details>
 

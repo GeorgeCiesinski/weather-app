@@ -9,7 +9,7 @@
   display: none; // mobile: only --active card shows
   flex-direction: column;
   align-items: stretch;
-  gap: 1rem;
+  gap: 0.5rem;
   padding: 1.25rem;
   color: var(--color-text);
   background-color: var(--color-surface);
@@ -34,6 +34,10 @@
     max-width: 360px;
     height: auto;
     max-height: calc(100dvh - 13rem);
+  }
+
+  h2 {
+    min-height: 52.8px;
   }
 
   &__body {
@@ -78,7 +82,6 @@
   h3 {
     font-size: 0.85rem;
     color: var(--color-text-secondary);
-    margin-bottom: 0.25rem;
   }
 
   .card-actions,
@@ -152,6 +155,8 @@
     line-height: 1.4;
     color: var(--color-text);
     white-space: pre-line;
+    height: 61px;
+    overflow-y: scroll;
   }
 
   .ask-advisor__hint {
@@ -238,15 +243,29 @@
     overflow-x: hidden; // clip overflow into slide
   }
 
-  .info-wrapper {
+  .info-wrapper, {
+    display: flex;
+    flex-direction: column;
+    align-self: center;
+    border-radius: 1rem;
+    width:100%;
+  }
+
+  .info-wrapper__upper {
     display: flex;
     align-self: center;
     border-radius: 1rem;
     width:100%;
   }
 
+  .conditions {
+    font-weight: 800;
+    text-align: center
+  }
+
   .icon-wrapper {
     display: flex;
+    flex-diretion: column;
     box-sizing: content-box;
     background-color: skyblue;
     align-self: center;
@@ -272,6 +291,7 @@
   }
 
   .small-info {
+    display: block;
     font-size: 0.8rem;
   }
 
