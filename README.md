@@ -44,6 +44,8 @@ For local development, Vercel environment variables, GitHub Actions deploy secre
 - [Nominatim](https://nominatim.org/) for searching OpenStreetMap
 - [Visual Crossing](https://www.visualcrossing.com/) for weather data
 
+Serverless `/api/geocode`, `/api/weather`, and `/api/advice` proxies rate-limit by IP ([Upstash](https://upstash.com)) and cap request size. Setup is in [GETTING_STARTED.md](GETTING_STARTED.md).
+
 ## Attribution
 
 - [OpenStreetMap](https://www.openstreetmap.org/copyright) provides the location data for geocoding

@@ -1,12 +1,15 @@
 /**
  * Vercel serverless handler that returns weather advice via AI Gateway.
  *
- * Expects a POST body shaped like AdviceRequest.
+ * POST only. Rate-limits by IP, sanitizes location/days/alerts, then calls
+ * generateText. Client errors stay generic (no upstream message leak).
  */
 import { generateText } from 'ai';
 import type { AdviceMessage, AdviceRequest, AdviceScope } from '../src/types/advice';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit.js';
+import { sanitizeAlerts, sanitizeDays } from './adviceSanitize.js';
 
-type AdviceApiRequest = {
+type AdviceApiRequest = RateLimitRequest & {
   method?: string;
   body?: Partial<AdviceRequest> | string;
 };
@@ -20,6 +23,7 @@ const MAX_QUESTION_LENGTH = 500;
 const MAX_HISTORY_MESSAGES = 6;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_OUTPUT_TOKENS = 1000;
+const MAX_LOCATION_LENGTH = 200;
 
 /**
  * Reads and normalizes the POST body from a Vercel request.
@@ -110,7 +114,8 @@ function buildSystemPrompt(scope: AdviceScope): string {
 /**
  * Handles AI advice requests from the frontend.
  *
- * Validates a POST AdviceRequest, calls AI Gateway via generateText, and returns
+ * Allows POST only, enforces the advice rate limit, validates and allowlists
+ * the AdviceRequest body, calls AI Gateway via generateText, and returns
  * either `{ answer }` or `{ error }` with an appropriate status code.
  *
  * @param req - The incoming POST request with an AdviceRequest body.
@@ -122,6 +127,11 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const limited = await enforceRateLimit(req, 'advice');
+  if (!limited.ok) {
+    return res.status(limited.status).json({ error: limited.error });
+  }
+
   const body = getBody(req);
   if (!body) {
     return res.status(400).json({ error: 'Invalid JSON body' });
@@ -130,12 +140,14 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
   const location = typeof body.location === 'string' ? body.location.trim() : '';
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   const scope = body.scope;
-  const days = body.days;
-  const alerts = body.alerts;
   const history = sanitizeHistory(body.history ?? []);
 
   if (!location) {
     return res.status(400).json({ error: 'Location is required' });
+  }
+
+  if (location.length > MAX_LOCATION_LENGTH) {
+    return res.status(400).json({ error: 'Location is too long' });
   }
 
   if (!question) {
@@ -150,20 +162,14 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
     return res.status(400).json({ error: 'Scope must be location or day' });
   }
 
-  if (!Array.isArray(days) || days.length === 0) {
-    return res.status(400).json({ error: 'Forecast days are required' });
+  const sanitizedDays = sanitizeDays(body.days, scope);
+  if (sanitizedDays === null) {
+    return res.status(400).json({ error: 'Forecast days are invalid' });
   }
 
-  if (scope === 'location' && days.length > 5) {
-    return res.status(400).json({ error: 'Location scope allows at most 5 days' });
-  }
-
-  if (scope === 'day' && days.length !== 1) {
-    return res.status(400).json({ error: 'Day scope requires exactly 1 day' });
-  }
-
-  if (!alerts || typeof alerts.count !== 'number' || !Array.isArray(alerts.alerts)) {
-    return res.status(400).json({ error: 'Alerts object is required' });
+  const sanitizedAlerts = sanitizeAlerts(body.alerts);
+  if (sanitizedAlerts === null) {
+    return res.status(400).json({ error: 'Alerts object is invalid' });
   }
 
   if (history === null) {
@@ -182,7 +188,7 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
           role: 'user',
           content: [
             `Location: ${location}`,
-            `Forecast JSON:\n${JSON.stringify({ days, alerts })}`,
+            `Forecast JSON:\n${JSON.stringify({ days: sanitizedDays, alerts: sanitizedAlerts })}`,
             `Question: ${question}`,
           ].join('\n\n'),
         },
@@ -209,7 +215,7 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
     // Guards against fake success (empty text in result)
     if (!result.text.trim()) {
       return res.status(502).json({
-        error: 'Model returned an empty answer. Try a higher maxOutputTokens or a different model.',
+        error: 'Upstream advice request failed',
       });
     }
 
@@ -231,7 +237,7 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
     }
 
     return res.status(502).json({
-      error: `Upstream advice request failed: ${message}`,
+      error: 'Upstream advice request failed',
     });
   }
 }

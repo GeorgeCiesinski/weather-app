@@ -1,14 +1,18 @@
 /**
  * Vercel serverless handler that proxies location requests to Nominatim.
  *
- * Searches locations using free-form query q and returns up to the limit of locations.
+ * GET only. Rate-limits by IP, caps the free-form query q, and returns up to
+ * the limit of locations.
  */
-
 import type { LocationResult } from '../src/types/location';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit.js';
 
 const BASE_URL = 'https://nominatim.openstreetmap.org/search';
 
-type LocationRequest = {
+const MAX_QUERY_LENGTH = 200;
+
+type LocationRequest = RateLimitRequest & {
+  method?: string;
   query: {
     q?: string;
   };
@@ -29,16 +33,34 @@ type NominatimResult = {
 /**
  * Handles incoming location API requests from the frontend.
  *
+ * Allows GET only, enforces the geocode rate limit, and rejects empty or
+ * oversized q before calling Nominatim.
+ *
  * @param req - The incoming request containing the q (location) query parameter.
  * @param res - The response object used to send status codes and JSON.
  * @returns A JSON response with location data or an error message.
  */
 export default async function handler(req: LocationRequest, res: GeocodeResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const limited = await enforceRateLimit(req, 'geocode');
+  if (!limited.ok) {
+    return res.status(limited.status).json({ error: limited.error });
+  }
+
   const q = req.query.q?.trim();
 
   if (!q) {
     return res.status(400).json({
       error: 'Location is required',
+    });
+  }
+
+  if (q.length > MAX_QUERY_LENGTH) {
+    return res.status(400).json({
+      error: 'Location is too long',
     });
   }
 
