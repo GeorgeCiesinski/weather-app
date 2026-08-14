@@ -8,6 +8,8 @@ import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
 
 const BASE_URL = 'https://nominatim.openstreetmap.org/search';
 
+const MAX_QUERY_LENGTH = 200;
+
 type LocationRequest = RateLimitRequest & {
   method?: string;
   query: {
@@ -49,6 +51,12 @@ export default async function handler(req: LocationRequest, res: GeocodeResponse
   if (!q) {
     return res.status(400).json({
       error: 'Location is required',
+    });
+  }
+
+  if (q.length > MAX_QUERY_LENGTH) {
+    return res.status(400).json({
+      error: 'Location is too long',
     });
   }
 

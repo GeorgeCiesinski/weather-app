@@ -5,7 +5,7 @@
  */
 import { UNIT_GROUPS } from '../src/types/unitGroup.js';
 import type { UnitGroup } from '../src/types/unitGroup';
-import { enforceRateLimit, type RateLimitRequest } from './rateLimit.js';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
 
 const BASE_URL =
   'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline';
@@ -23,6 +23,16 @@ type WeatherResponse = {
   status: (code: number) => WeatherResponse;
   json: (body: unknown) => WeatherResponse;
 };
+
+/**
+ * Parses a coordinate query param into a finite number inside [min, max].
+ */
+export function parseCoord(raw: string | undefined, min: number, max: number): number | null {
+  if (raw == null || raw.trim() === '') return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < min || value > max) return null;
+  return value;
+}
 
 /**
  * Validates a unit group string and returns a safe UnitGroup value.
@@ -54,12 +64,13 @@ export default async function handler(req: WeatherRequest, res: WeatherResponse)
     return res.status(limited.status).json({ error: limited.error });
   }
 
-  const lat = req.query.lat;
-  const lon = req.query.lon;
   // Whitelist and default unit group before forwarding to Visual Crossing.
   const unitGroup = validateUnitGroup(req.query.unitGroup);
 
-  if (!lat || !lon) {
+  const lat = parseCoord(req.query.lat, -90, 90);
+  const lon = parseCoord(req.query.lon, -180, 180);
+
+  if (lat === null || lon === null) {
     return res.status(400).json({
       error: 'Latitude and longitude are required',
     });

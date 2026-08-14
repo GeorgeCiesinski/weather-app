@@ -169,7 +169,7 @@ describe('advice API handler', () => {
     await handler({ method: 'POST', body: validPayload({ days: [] }) }, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Forecast days are required' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Forecast days are invalid' });
   });
 
   it('returns 400 when location scope has more than 5 days', async () => {
@@ -186,7 +186,7 @@ describe('advice API handler', () => {
     );
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Location scope allows at most 5 days' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Forecast days are invalid' });
   });
 
   it('accepts location scope with exactly 5 days', async () => {
@@ -220,7 +220,7 @@ describe('advice API handler', () => {
     );
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Day scope requires exactly 1 day' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Forecast days are invalid' });
   });
 
   it('returns 400 when alerts are missing', async () => {
@@ -228,7 +228,7 @@ describe('advice API handler', () => {
     await handler({ method: 'POST', body: validPayload({ alerts: undefined }) }, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Alerts object is required' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Alerts object is invalid' });
   });
 
   it('returns 400 when history is invalid', async () => {
@@ -286,13 +286,15 @@ describe('advice API handler', () => {
 
     const call = vi.mocked(generateText).mock.calls[0][0];
     const lastMessage = call.messages?.[call.messages.length - 1];
-    expect(lastMessage).toMatchObject({ role: 'user' });
-    expect(String((lastMessage as { content: string }).content)).toContain(
-      `Forecast JSON:\n${JSON.stringify({ days: payload.days, alerts: payload.alerts })}`,
-    );
-    expect(String((lastMessage as { content: string }).content)).toContain(
-      'Question: Should I bring an umbrella?',
-    );
+    const content = String((lastMessage as { content: string }).content);
+
+    expect(content).toContain('Location: London, UK');
+    expect(content).toContain('Question: Should I bring an umbrella?');
+    expect(content).toContain('"datetime":"2026-07-15"');
+    expect(content).toContain('"temp":"22°C"');
+    expect(content).toContain('"preciptype":["rain"]');
+    expect(content).toContain('"count":0');
+    expect(content).not.toContain('"hours"');
   });
 
   it('uses a day-focused system prompt for day scope', async () => {
@@ -336,10 +338,11 @@ describe('advice API handler', () => {
     expect(res.status).toHaveBeenCalledWith(200);
     const call = vi.mocked(generateText).mock.calls[0][0];
     const lastMessage = call.messages?.[call.messages.length - 1];
-    expect(String((lastMessage as { content: string }).content)).toContain(
-      `Forecast JSON:\n${JSON.stringify({ days: payload.days, alerts: payload.alerts })}`,
-    );
-    expect(String((lastMessage as { content: string }).content)).toContain('"hours"');
+    const content = String((lastMessage as { content: string }).content);
+
+    expect(content).toContain('"hours"');
+    expect(content).toContain('"datetime":"14:00:00"');
+    expect(content).toContain('"winddir":"from S (180°)"');
   });
 
   it('uses AI_ADVICE_MODEL when configured', async () => {
@@ -366,7 +369,7 @@ describe('advice API handler', () => {
 
     expect(res.status).toHaveBeenCalledWith(502);
     expect(res.json).toHaveBeenCalledWith({
-      error: 'Model returned an empty answer. Try a higher maxOutputTokens or a different model.',
+      error: 'Upstream advice request failed',
     });
   });
 
@@ -402,7 +405,7 @@ describe('advice API handler', () => {
 
     expect(res.status).toHaveBeenCalledWith(502);
     expect(res.json).toHaveBeenCalledWith({
-      error: 'Upstream advice request failed: gateway timeout',
+      error: 'Upstream advice request failed',
     });
   });
 });

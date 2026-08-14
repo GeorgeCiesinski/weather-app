@@ -6,6 +6,7 @@
 import { generateText } from 'ai';
 import type { AdviceMessage, AdviceRequest, AdviceScope } from '../src/types/advice';
 import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
+import { sanitizeAlerts, sanitizeDays } from './adviceSanitize';
 
 type AdviceApiRequest = RateLimitRequest & {
   method?: string;
@@ -21,6 +22,7 @@ const MAX_QUESTION_LENGTH = 500;
 const MAX_HISTORY_MESSAGES = 6;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_OUTPUT_TOKENS = 1000;
+const MAX_LOCATION_LENGTH = 200;
 
 /**
  * Reads and normalizes the POST body from a Vercel request.
@@ -136,12 +138,14 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
   const location = typeof body.location === 'string' ? body.location.trim() : '';
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   const scope = body.scope;
-  const days = body.days;
-  const alerts = body.alerts;
   const history = sanitizeHistory(body.history ?? []);
 
   if (!location) {
     return res.status(400).json({ error: 'Location is required' });
+  }
+
+  if (location.length > MAX_LOCATION_LENGTH) {
+    return res.status(400).json({ error: 'Location is too long' });
   }
 
   if (!question) {
@@ -156,20 +160,14 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
     return res.status(400).json({ error: 'Scope must be location or day' });
   }
 
-  if (!Array.isArray(days) || days.length === 0) {
-    return res.status(400).json({ error: 'Forecast days are required' });
+  const sanitizedDays = sanitizeDays(body.days, scope);
+  if (sanitizedDays === null) {
+    return res.status(400).json({ error: 'Forecast days are invalid' });
   }
 
-  if (scope === 'location' && days.length > 5) {
-    return res.status(400).json({ error: 'Location scope allows at most 5 days' });
-  }
-
-  if (scope === 'day' && days.length !== 1) {
-    return res.status(400).json({ error: 'Day scope requires exactly 1 day' });
-  }
-
-  if (!alerts || typeof alerts.count !== 'number' || !Array.isArray(alerts.alerts)) {
-    return res.status(400).json({ error: 'Alerts object is required' });
+  const sanitizedAlerts = sanitizeAlerts(body.alerts);
+  if (sanitizedAlerts === null) {
+    return res.status(400).json({ error: 'Alerts object is invalid' });
   }
 
   if (history === null) {
@@ -188,7 +186,7 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
           role: 'user',
           content: [
             `Location: ${location}`,
-            `Forecast JSON:\n${JSON.stringify({ days, alerts })}`,
+            `Forecast JSON:\n${JSON.stringify({ days: sanitizedDays, alerts: sanitizedAlerts })}`,
             `Question: ${question}`,
           ].join('\n\n'),
         },
@@ -215,7 +213,7 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
     // Guards against fake success (empty text in result)
     if (!result.text.trim()) {
       return res.status(502).json({
-        error: 'Model returned an empty answer. Try a higher maxOutputTokens or a different model.',
+        error: 'Upstream advice request failed',
       });
     }
 
@@ -237,7 +235,7 @@ export default async function handler(req: AdviceApiRequest, res: AdviceApiRespo
     }
 
     return res.status(502).json({
-      error: `Upstream advice request failed: ${message}`,
+      error: 'Upstream advice request failed',
     });
   }
 }
