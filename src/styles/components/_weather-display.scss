@@ -267,12 +267,11 @@
     display: flex;
     flex-diretion: column;
     box-sizing: content-box;
-    background-color: skyblue;
+    background-color: rgba(skyblue, 0.5);
     align-self: center;
     border: 2px solid black;
     border-radius: 1rem;
     padding: 0.5rem;
-    opacity: 0.9;
   }
 
   .temperature,
