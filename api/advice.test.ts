@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AdviceRequest, SlimDayForecast } from '../src/types/advice';
+import type { AdviceRequest, SlimDayForecast, SlimHourForecast } from '../src/types/advice';
 
 vi.mock('ai', () => ({
   generateText: vi.fn(),
@@ -46,6 +46,18 @@ const slimDay: SlimDayForecast = {
   visibility: '15.1 km',
 };
 
+const slimHour: SlimHourForecast = {
+  datetime: '14:00:00',
+  conditions: 'Clear',
+  temp: '24°C',
+  feelslike: '25°C',
+  precipprob: '10%',
+  precip: '0mm',
+  preciptype: [],
+  windspeed: '8 km/h',
+  winddir: 'from S (180°)',
+};
+
 function validPayload(overrides: Partial<AdviceRequest> = {}): AdviceRequest {
   return {
     scope: 'location',
@@ -63,6 +75,7 @@ describe('advice API handler', () => {
 
   beforeEach(() => {
     vi.mocked(generateText).mockReset();
+    vi.mocked(enforceRateLimit).mockClear();
     vi.mocked(enforceRateLimit).mockResolvedValue({ ok: true });
     vi.mocked(generateText).mockResolvedValue({
       text: 'Bring a light jacket.',
@@ -151,6 +164,15 @@ describe('advice API handler', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({ error: 'Question is too long' });
+  });
+
+  it('returns 400 when location is too long', async () => {
+    const res = createMockResponse();
+    await handler({ method: 'POST', body: validPayload({ location: 'a'.repeat(201) }) }, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Location is too long' });
+    expect(generateText).not.toHaveBeenCalled();
   });
 
   it('returns 400 when scope is invalid', async () => {
@@ -317,19 +339,7 @@ describe('advice API handler', () => {
     const res = createMockResponse();
     const dayWithHours = {
       ...slimDay,
-      hours: [
-        {
-          datetime: '14:00:00',
-          conditions: 'Clear',
-          temp: '24°C',
-          feelslike: '25°C',
-          precipprob: '10%',
-          precip: '0mm',
-          preciptype: [] as string[],
-          windspeed: '8 km/h',
-          winddir: 'from S (180°)',
-        },
-      ],
+      hours: [slimHour],
     };
     const payload = validPayload({ scope: 'day', days: [dayWithHours] });
 
@@ -343,6 +353,88 @@ describe('advice API handler', () => {
     expect(content).toContain('"hours"');
     expect(content).toContain('"datetime":"14:00:00"');
     expect(content).toContain('"winddir":"from S (180°)"');
+  });
+
+  it('drops unknown forecast keys before calling the model', async () => {
+    const res = createMockResponse();
+    const inflated = { ...slimDay, extra: 'x'.repeat(5000) };
+    await handler(
+      { method: 'POST', body: validPayload({ days: [inflated] as AdviceRequest['days'] }) },
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    const call = vi.mocked(generateText).mock.calls[0][0];
+    const lastMessage = call.messages?.[call.messages.length - 1];
+    expect(String((lastMessage as { content: string }).content)).not.toContain('"extra"');
+  });
+
+  it('returns 400 when day scope has too many hourly rows', async () => {
+    const res = createMockResponse();
+    const dayWithHours = {
+      ...slimDay,
+      hours: Array.from({ length: 25 }, () => slimHour),
+    };
+    await handler(
+      { method: 'POST', body: validPayload({ scope: 'day', days: [dayWithHours] }) },
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Forecast days are invalid' });
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when alert count does not match the alerts array', async () => {
+    const res = createMockResponse();
+    await handler(
+      {
+        method: 'POST',
+        body: validPayload({ alerts: { count: 0, alerts: [{ summary: 'Wind' }] } }),
+      },
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Alerts object is invalid' });
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when an alert summary is too long', async () => {
+    const res = createMockResponse();
+    await handler(
+      {
+        method: 'POST',
+        body: validPayload({
+          alerts: { count: 1, alerts: [{ summary: 'x'.repeat(401) }] },
+        }),
+      },
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Alerts object is invalid' });
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when there are too many alerts', async () => {
+    const res = createMockResponse();
+    await handler(
+      {
+        method: 'POST',
+        body: validPayload({
+          alerts: {
+            count: 21,
+            alerts: Array.from({ length: 21 }, () => ({ summary: 'Wind' })),
+          },
+        }),
+      },
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Alerts object is invalid' });
+    expect(generateText).not.toHaveBeenCalled();
   });
 
   it('uses AI_ADVICE_MODEL when configured', async () => {

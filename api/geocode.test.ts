@@ -65,6 +65,20 @@ describe('Geocode API handler', () => {
     });
   });
 
+  it('returns 400 when the query is too long', async () => {
+    const req = {
+      method: 'GET',
+      query: { q: 'a'.repeat(201) },
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Location is too long' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('returns 405 for non-GET methods', async () => {
     const req = {
       method: 'POST',

@@ -5,7 +5,7 @@ vi.mock('./rateLimit', () => ({
 }));
 
 import { enforceRateLimit } from './rateLimit';
-import handler, { validateUnitGroup } from './weather';
+import handler, { parseCoord, validateUnitGroup } from './weather';
 
 // Creates the small part of Vercel's response object that the handler uses.
 function createMockResponse() {
@@ -16,6 +16,26 @@ function createMockResponse() {
 
   return res;
 }
+
+describe('parseCoord', () => {
+  it('returns a number inside the allowed range', () => {
+    expect(parseCoord('51.5074', -90, 90)).toBe(51.5074);
+  });
+
+  it('returns null when the value is missing or blank', () => {
+    expect(parseCoord(undefined, -90, 90)).toBeNull();
+    expect(parseCoord('  ', -90, 90)).toBeNull();
+  });
+
+  it('returns null when the value is not a finite number', () => {
+    expect(parseCoord('abc', -90, 90)).toBeNull();
+  });
+
+  it('returns null when the value is outside the range', () => {
+    expect(parseCoord('91', -90, 90)).toBeNull();
+    expect(parseCoord('181', -180, 180)).toBeNull();
+  });
+});
 
 describe('validateUnitGroup', () => {
   it.each(['metric', 'us', 'uk', 'base'] as const)(
@@ -70,6 +90,43 @@ describe('weather API handler', () => {
     expect(res.json).toHaveBeenCalledWith({
       error: 'Latitude and longitude are required',
     });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when lat or lon is not a number', async () => {
+    const req = {
+      method: 'GET',
+      query: {
+        lat: 'abc',
+        lon: '-0.1278',
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Latitude and longitude are required',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when lat or lon is out of range', async () => {
+    const resLat = createMockResponse();
+    await handler({ method: 'GET', query: { lat: '91', lon: '-0.1278' } }, resLat);
+
+    expect(resLat.status).toHaveBeenCalledWith(400);
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    const resLon = createMockResponse();
+    await handler({ method: 'GET', query: { lat: '51.5074', lon: '181' } }, resLon);
+
+    expect(resLon.status).toHaveBeenCalledWith(400);
+    expect(resLon.json).toHaveBeenCalledWith({
+      error: 'Latitude and longitude are required',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('returns 405 for non-GET methods', async () => {
