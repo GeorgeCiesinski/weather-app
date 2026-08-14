@@ -6,7 +6,7 @@
  */
 import { generateText } from 'ai';
 import type { AdviceMessage, AdviceRequest, AdviceScope } from '../src/types/advice';
-import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit.js';
 import { sanitizeAlerts, sanitizeDays } from './adviceSanitize';
 
 type AdviceApiRequest = RateLimitRequest & {

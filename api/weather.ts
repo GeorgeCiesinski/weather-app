@@ -6,7 +6,7 @@
  */
 import { UNIT_GROUPS } from '../src/types/unitGroup.js';
 import type { UnitGroup } from '../src/types/unitGroup';
-import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit.js';
 
 const BASE_URL =
   'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline';

@@ -5,7 +5,7 @@
  * the limit of locations.
  */
 import type { LocationResult } from '../src/types/location';
-import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit.js';
 
 const BASE_URL = 'https://nominatim.openstreetmap.org/search';
 
