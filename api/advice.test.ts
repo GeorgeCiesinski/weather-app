@@ -228,6 +228,15 @@ describe('advice API handler', () => {
     expect(generateText).toHaveBeenCalled();
   });
 
+  it('accepts a location-scope day when preciptype is null', async () => {
+    const res = createMockResponse();
+    const dayWithNullPrecip = { ...slimDay, preciptype: null as unknown as string[] };
+    await handler({ method: 'POST', body: validPayload({ days: [dayWithNullPrecip] }) }, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(generateText).toHaveBeenCalled();
+  });
+
   it('returns 400 when day scope does not have exactly 1 day', async () => {
     const res = createMockResponse();
     await handler(

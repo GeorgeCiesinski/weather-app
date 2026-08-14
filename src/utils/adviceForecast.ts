@@ -94,7 +94,7 @@ export function slimDay(day: DailyWeather, unitGroup: UnitGroup): SlimDayForecas
     precipprob: formatPercent(day.precipprob),
     precip: formatPrecip(day.precip, unitGroup),
     precipcover: formatPercent(day.precipcover),
-    preciptype: day.preciptype,
+    preciptype: day.preciptype ?? [],
     snow: formatSnow(day.snow, unitGroup),
     snowdepth: formatSnow(day.snowdepth, unitGroup),
     humidity: formatPercent(day.humidity),

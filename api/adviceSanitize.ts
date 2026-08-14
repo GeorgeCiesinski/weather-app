@@ -72,9 +72,11 @@ function boundedString(value: unknown, maxLen: number): string | null {
 }
 
 /**
- * Allowlisted preciptype entries, or null when the field is missing/invalid/too large.
+ * Allowlisted preciptype entries, or null when the field is invalid or too large.
+ * Missing or null (Visual Crossing dry days) is treated as an empty list.
  */
 function sanitizePrecipType(value: unknown): string[] | null {
+  if (value == null) return [];
   if (!Array.isArray(value) || value.length > MAX_PRECIP_TYPES) return null;
   const types: string[] = [];
   for (const item of value) {
