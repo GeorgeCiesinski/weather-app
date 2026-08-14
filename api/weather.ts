@@ -1,7 +1,8 @@
 /**
  * Vercel serverless handler that proxies weather requests to Visual Crossing.
  *
- * Validates input, attaches the API key server-side, and returns weather JSON.
+ * GET only. Rate-limits by IP, parses lat/lon as numbers in range, attaches
+ * the API key server-side, and returns weather JSON.
  */
 import { UNIT_GROUPS } from '../src/types/unitGroup.js';
 import type { UnitGroup } from '../src/types/unitGroup';
@@ -26,6 +27,11 @@ type WeatherResponse = {
 
 /**
  * Parses a coordinate query param into a finite number inside [min, max].
+ *
+ * @param raw - Query string value (latitude or longitude).
+ * @param min - Inclusive lower bound.
+ * @param max - Inclusive upper bound.
+ * @returns The parsed number, or null when missing, non-finite, or out of range.
  */
 export function parseCoord(raw: string | undefined, min: number, max: number): number | null {
   if (raw == null || raw.trim() === '') return null;
@@ -49,6 +55,9 @@ export function validateUnitGroup(selected: string | undefined): UnitGroup {
 
 /**
  * Handles incoming weather API requests from the frontend.
+ *
+ * Allows GET only, enforces the weather rate limit, validates coordinates and
+ * unit group, then proxies to Visual Crossing using numeric lat/lon in the URL.
  *
  * @param req - The incoming request with lat, lon, and optional unitGroup query parameters.
  * @param res - The response object used to send status codes and JSON.

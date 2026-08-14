@@ -1,7 +1,8 @@
 /**
  * Vercel serverless handler that proxies location requests to Nominatim.
  *
- * Searches locations using free-form query q and returns up to the limit of locations.
+ * GET only. Rate-limits by IP, caps the free-form query q, and returns up to
+ * the limit of locations.
  */
 import type { LocationResult } from '../src/types/location';
 import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
@@ -31,6 +32,9 @@ type NominatimResult = {
 
 /**
  * Handles incoming location API requests from the frontend.
+ *
+ * Allows GET only, enforces the geocode rate limit, and rejects empty or
+ * oversized q before calling Nominatim.
  *
  * @param req - The incoming request containing the q (location) query parameter.
  * @param res - The response object used to send status codes and JSON.

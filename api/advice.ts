@@ -1,7 +1,8 @@
 /**
  * Vercel serverless handler that returns weather advice via AI Gateway.
  *
- * Expects a POST body shaped like AdviceRequest.
+ * POST only. Rate-limits by IP, sanitizes location/days/alerts, then calls
+ * generateText. Client errors stay generic (no upstream message leak).
  */
 import { generateText } from 'ai';
 import type { AdviceMessage, AdviceRequest, AdviceScope } from '../src/types/advice';
@@ -113,7 +114,8 @@ function buildSystemPrompt(scope: AdviceScope): string {
 /**
  * Handles AI advice requests from the frontend.
  *
- * Validates a POST AdviceRequest, calls AI Gateway via generateText, and returns
+ * Allows POST only, enforces the advice rate limit, validates and allowlists
+ * the AdviceRequest body, calls AI Gateway via generateText, and returns
  * either `{ answer }` or `{ error }` with an appropriate status code.
  *
  * @param req - The incoming POST request with an AdviceRequest body.

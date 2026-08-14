@@ -85,6 +85,12 @@ function sanitizePrecipType(value: unknown): string[] | null {
   return types;
 }
 
+/**
+ * Allowlists a single slim hour row.
+ *
+ * @param raw - Unknown hour object from the request body.
+ * @returns A SlimHourForecast, or null when invalid or over cap.
+ */
 function sanitizeHour(raw: unknown): SlimHourForecast | null {
   if (!raw || typeof raw !== 'object') return null;
   const hour = raw as Record<string, unknown>;
@@ -100,6 +106,14 @@ function sanitizeHour(raw: unknown): SlimHourForecast | null {
   out.preciptype = preciptype;
   return out as SlimHourForecast;
 }
+
+/**
+ * Allowlists a single slim day. Hours are copied only when allowHours is true.
+ *
+ * @param raw - Unknown day object from the request body.
+ * @param allowHours - True for day scope; location scope never includes hours.
+ * @returns A SlimDayForecast, or null when invalid or over cap.
+ */
 function sanitizeDay(raw: unknown, allowHours: boolean): SlimDayForecast | null {
   if (!raw || typeof raw !== 'object') return null;
   const day = raw as Record<string, unknown>;
@@ -143,6 +157,8 @@ function sanitizeDay(raw: unknown, allowHours: boolean): SlimDayForecast | null 
 /**
  * Copies only slim day fields. Location scope never includes hours (even if sent).
  *
+ * @param days - Raw days array from the request body.
+ * @param scope - Location (at most 5 days) or day (exactly 1 day).
  * @returns Sanitized days, or null when the payload is invalid or over cap.
  */
 export function sanitizeDays(days: unknown, scope: 'location' | 'day'): SlimDayForecast[] | null {
@@ -159,6 +175,12 @@ export function sanitizeDays(days: unknown, scope: 'location' | 'day'): SlimDayF
   return sanitized;
 }
 
+/**
+ * Allowlists a single slim alert.
+ *
+ * @param raw - Unknown alert object from the request body.
+ * @returns A SlimAlert, or null when invalid or over cap.
+ */
 function sanitizeAlert(raw: unknown): SlimAlert | null {
   if (!raw || typeof raw !== 'object') return null;
   const alert = raw as Record<string, unknown>;
@@ -195,6 +217,9 @@ function sanitizeAlert(raw: unknown): SlimAlert | null {
 
 /**
  * Allowlists slim alerts. count must equal alerts.length.
+ *
+ * @param alerts - Raw alerts object from the request body.
+ * @returns Sanitized SlimAlerts, or null when invalid or over cap.
  */
 export function sanitizeAlerts(alerts: unknown): SlimAlerts | null {
   if (!alerts || typeof alerts !== 'object') return null;

@@ -76,6 +76,11 @@ export function getClientIp(headers: HeaderMap | undefined): string {
   return UNKNOWN_IP;
 }
 
+/**
+ * True when both Upstash REST env vars are set.
+ *
+ * @returns Whether Redis.fromEnv() can run.
+ */
 function hasRedisEnv(): boolean {
   return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 }
@@ -110,8 +115,12 @@ function getLimiters(): Record<RateLimitEndpoint, Ratelimit> {
 /**
  * Allows or denies a request for the given API endpoint.
  *
+ * Skips the limiter during `vercel dev`. Preview and production fail closed
+ * (503) when Redis is missing or the Upstash call throws.
+ *
  * @param req - Request that may include Vercel/Node headers.
  * @param endpoint - Which budget to apply.
+ * @returns Allow, 429 when over budget, or 503 when Redis is unavailable.
  */
 export async function enforceRateLimit(
   req: RateLimitRequest,
