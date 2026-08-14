@@ -7,7 +7,7 @@
 import { generateText } from 'ai';
 import type { AdviceMessage, AdviceRequest, AdviceScope } from '../src/types/advice';
 import { enforceRateLimit, type RateLimitRequest } from './rateLimit.js';
-import { sanitizeAlerts, sanitizeDays } from './adviceSanitize';
+import { sanitizeAlerts, sanitizeDays } from './adviceSanitize.js';
 
 type AdviceApiRequest = RateLimitRequest & {
   method?: string;
