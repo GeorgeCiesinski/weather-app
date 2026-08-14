@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import handler, { validateUnitGroup } from './weather';
+
+vi.mock('./rateLimit', () => ({
+  enforceRateLimit: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+import { enforceRateLimit } from './rateLimit';
+import handler, { parseCoord, validateUnitGroup } from './weather';
 
 // Creates the small part of Vercel's response object that the handler uses.
 function createMockResponse() {
@@ -10,6 +16,26 @@ function createMockResponse() {
 
   return res;
 }
+
+describe('parseCoord', () => {
+  it('returns a number inside the allowed range', () => {
+    expect(parseCoord('51.5074', -90, 90)).toBe(51.5074);
+  });
+
+  it('returns null when the value is missing or blank', () => {
+    expect(parseCoord(undefined, -90, 90)).toBeNull();
+    expect(parseCoord('  ', -90, 90)).toBeNull();
+  });
+
+  it('returns null when the value is not a finite number', () => {
+    expect(parseCoord('abc', -90, 90)).toBeNull();
+  });
+
+  it('returns null when the value is outside the range', () => {
+    expect(parseCoord('91', -90, 90)).toBeNull();
+    expect(parseCoord('181', -180, 180)).toBeNull();
+  });
+});
 
 describe('validateUnitGroup', () => {
   it.each(['metric', 'us', 'uk', 'base'] as const)(
@@ -37,6 +63,8 @@ describe('weather API handler', () => {
 
   // Replaces the real network layer before every test.
   beforeEach(() => {
+    vi.mocked(enforceRateLimit).mockClear();
+    vi.mocked(enforceRateLimit).mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -49,6 +77,7 @@ describe('weather API handler', () => {
 
   it('returns 400 when lat or lon is missing', async () => {
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
       },
@@ -61,12 +90,92 @@ describe('weather API handler', () => {
     expect(res.json).toHaveBeenCalledWith({
       error: 'Latitude and longitude are required',
     });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when lat or lon is not a number', async () => {
+    const req = {
+      method: 'GET',
+      query: {
+        lat: 'abc',
+        lon: '-0.1278',
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Latitude and longitude are required',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when lat or lon is out of range', async () => {
+    const resLat = createMockResponse();
+    await handler({ method: 'GET', query: { lat: '91', lon: '-0.1278' } }, resLat);
+
+    expect(resLat.status).toHaveBeenCalledWith(400);
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    const resLon = createMockResponse();
+    await handler({ method: 'GET', query: { lat: '51.5074', lon: '181' } }, resLon);
+
+    expect(resLon.status).toHaveBeenCalledWith(400);
+    expect(resLon.json).toHaveBeenCalledWith({
+      error: 'Latitude and longitude are required',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 405 for non-GET methods', async () => {
+    const req = {
+      method: 'POST',
+      query: { lat: '51.5074', lon: '-0.1278' },
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(405);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Method not allowed' });
+    expect(enforceRateLimit).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 when the rate limiter denies the request', async () => {
+    vi.mocked(enforceRateLimit).mockResolvedValue({
+      ok: false,
+      status: 429,
+      error: 'Too many requests. Try again shortly.',
+    });
+
+    process.env.WEATHER_API_KEY = 'test-api-key';
+    const req = {
+      method: 'GET',
+      query: { lat: '51.5074', lon: '-0.1278' },
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(enforceRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'GET' }),
+      'weather',
+    );
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Too many requests. Try again shortly.',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('returns 500 when the API key is not configured', async () => {
     delete process.env.WEATHER_API_KEY;
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -91,6 +200,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -120,6 +230,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '35.6762',
         lon: '139.6503',
@@ -142,6 +253,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '35.6762',
         lon: '139.6503',
@@ -166,6 +278,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -190,6 +303,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -214,6 +328,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -238,6 +353,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -262,6 +378,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -285,6 +402,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',

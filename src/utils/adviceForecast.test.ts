@@ -92,6 +92,13 @@ describe('slimDay', () => {
     });
   });
 
+  it('defaults missing or null preciptype to an empty array', () => {
+    expect(slimDay(makeDay({ preciptype: undefined }), 'metric').preciptype).toEqual([]);
+    expect(
+      slimDay(makeDay({ preciptype: null as unknown as string[] }), 'metric').preciptype,
+    ).toEqual([]);
+  });
+
   it('formats temps, precip, snow, and wind for us', () => {
     const day = makeDay({
       temp: 72,
