@@ -3,12 +3,13 @@
  *
  * Searches locations using free-form query q and returns up to the limit of locations.
  */
-
 import type { LocationResult } from '../src/types/location';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
 
 const BASE_URL = 'https://nominatim.openstreetmap.org/search';
 
-type LocationRequest = {
+type LocationRequest = RateLimitRequest & {
+  method?: string;
   query: {
     q?: string;
   };
@@ -34,6 +35,15 @@ type NominatimResult = {
  * @returns A JSON response with location data or an error message.
  */
 export default async function handler(req: LocationRequest, res: GeocodeResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const limited = await enforceRateLimit(req, 'geocode');
+  if (!limited.ok) {
+    return res.status(limited.status).json({ error: limited.error });
+  }
+
   const q = req.query.q?.trim();
 
   if (!q) {

@@ -5,6 +5,11 @@ vi.mock('ai', () => ({
   generateText: vi.fn(),
 }));
 
+vi.mock('./rateLimit', () => ({
+  enforceRateLimit: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+import { enforceRateLimit } from './rateLimit';
 import { generateText } from 'ai';
 import handler from './advice';
 
@@ -58,6 +63,7 @@ describe('advice API handler', () => {
 
   beforeEach(() => {
     vi.mocked(generateText).mockReset();
+    vi.mocked(enforceRateLimit).mockResolvedValue({ ok: true });
     vi.mocked(generateText).mockResolvedValue({
       text: 'Bring a light jacket.',
       finishReason: 'stop',
@@ -82,6 +88,28 @@ describe('advice API handler', () => {
 
     expect(res.status).toHaveBeenCalledWith(405);
     expect(res.json).toHaveBeenCalledWith({ error: 'Method not allowed' });
+    expect(generateText).not.toHaveBeenCalled();
+    expect(enforceRateLimit).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 when the rate limiter denies the request', async () => {
+    vi.mocked(enforceRateLimit).mockResolvedValue({
+      ok: false,
+      status: 429,
+      error: 'Too many requests. Try again shortly.',
+    });
+
+    const res = createMockResponse();
+    await handler({ method: 'POST', body: validPayload() }, res);
+
+    expect(enforceRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'POST' }),
+      'advice',
+    );
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Too many requests. Try again shortly.',
+    });
     expect(generateText).not.toHaveBeenCalled();
   });
 

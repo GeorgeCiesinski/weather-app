@@ -5,11 +5,13 @@
  */
 import { UNIT_GROUPS } from '../src/types/unitGroup.js';
 import type { UnitGroup } from '../src/types/unitGroup';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit.js';
 
 const BASE_URL =
   'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline';
 
-type WeatherRequest = {
+type WeatherRequest = RateLimitRequest & {
+  method?: string;
   query: {
     lat?: string;
     lon?: string;
@@ -43,6 +45,15 @@ export function validateUnitGroup(selected: string | undefined): UnitGroup {
  * @returns A JSON response with weather data or an error message.
  */
 export default async function handler(req: WeatherRequest, res: WeatherResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const limited = await enforceRateLimit(req, 'weather');
+  if (!limited.ok) {
+    return res.status(limited.status).json({ error: limited.error });
+  }
+
   const lat = req.query.lat;
   const lon = req.query.lon;
   // Whitelist and default unit group before forwarding to Visual Crossing.

@@ -5,8 +5,9 @@
  */
 import { generateText } from 'ai';
 import type { AdviceMessage, AdviceRequest, AdviceScope } from '../src/types/advice';
+import { enforceRateLimit, type RateLimitRequest } from './rateLimit';
 
-type AdviceApiRequest = {
+type AdviceApiRequest = RateLimitRequest & {
   method?: string;
   body?: Partial<AdviceRequest> | string;
 };
@@ -120,6 +121,11 @@ function buildSystemPrompt(scope: AdviceScope): string {
 export default async function handler(req: AdviceApiRequest, res: AdviceApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const limited = await enforceRateLimit(req, 'advice');
+  if (!limited.ok) {
+    return res.status(limited.status).json({ error: limited.error });
   }
 
   const body = getBody(req);

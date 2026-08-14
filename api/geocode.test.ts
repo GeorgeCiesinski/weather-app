@@ -1,4 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('./rateLimit', () => ({
+  enforceRateLimit: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+import { enforceRateLimit } from './rateLimit';
 import handler from './geocode';
 
 // Creates the small part of Vercel's response object that the handler uses.
@@ -14,6 +20,8 @@ function createMockResponse() {
 describe('Geocode API handler', () => {
   // Replaces the real network layer before every test.
   beforeEach(() => {
+    vi.mocked(enforceRateLimit).mockClear();
+    vi.mocked(enforceRateLimit).mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -26,6 +34,7 @@ describe('Geocode API handler', () => {
   // Validates request input before any external API call is attempted.
   it('returns 400 when location is missing', async () => {
     const req = {
+      method: 'GET',
       query: {},
     };
     const res = createMockResponse();
@@ -41,6 +50,7 @@ describe('Geocode API handler', () => {
 
   it('returns 400 when location is only whitespace', async () => {
     const req = {
+      method: 'GET',
       query: {
         q: ' ',
       },
@@ -53,6 +63,47 @@ describe('Geocode API handler', () => {
     expect(res.json).toHaveBeenCalledWith({
       error: 'Location is required',
     });
+  });
+
+  it('returns 405 for non-GET methods', async () => {
+    const req = {
+      method: 'POST',
+      query: { q: 'London' },
+    };
+
+    const res = createMockResponse();
+
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(405);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Method not allowed' });
+    expect(enforceRateLimit).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 when the rate limiter denies the request', async () => {
+    vi.mocked(enforceRateLimit).mockResolvedValue({
+      ok: false,
+      status: 429,
+      error: 'Too many requests. Try again shortly.',
+    });
+
+    const req = {
+      method: 'GET',
+      query: { q: 'London' },
+    };
+
+    const res = createMockResponse();
+
+    await handler(req, res);
+    expect(enforceRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'GET' }),
+      'geocode',
+    );
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Too many requests. Try again shortly.',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   // Confirms location is mapped correctly
@@ -72,6 +123,7 @@ describe('Geocode API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         q: 'Tokyo',
       },
@@ -99,6 +151,7 @@ describe('Geocode API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         q: 'London',
       },
@@ -119,6 +172,7 @@ describe('Geocode API handler', () => {
       json: vi.fn().mockResolvedValue([]),
     } as unknown as Response);
     const req = {
+      method: 'GET',
       query: {
         q: 'New York',
       },

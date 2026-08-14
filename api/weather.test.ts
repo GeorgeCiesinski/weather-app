@@ -1,4 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('./rateLimit', () => ({
+  enforceRateLimit: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+import { enforceRateLimit } from './rateLimit';
 import handler, { validateUnitGroup } from './weather';
 
 // Creates the small part of Vercel's response object that the handler uses.
@@ -37,6 +43,8 @@ describe('weather API handler', () => {
 
   // Replaces the real network layer before every test.
   beforeEach(() => {
+    vi.mocked(enforceRateLimit).mockClear();
+    vi.mocked(enforceRateLimit).mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -49,6 +57,7 @@ describe('weather API handler', () => {
 
   it('returns 400 when lat or lon is missing', async () => {
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
       },
@@ -63,10 +72,53 @@ describe('weather API handler', () => {
     });
   });
 
+  it('returns 405 for non-GET methods', async () => {
+    const req = {
+      method: 'POST',
+      query: { lat: '51.5074', lon: '-0.1278' },
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(405);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Method not allowed' });
+    expect(enforceRateLimit).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 when the rate limiter denies the request', async () => {
+    vi.mocked(enforceRateLimit).mockResolvedValue({
+      ok: false,
+      status: 429,
+      error: 'Too many requests. Try again shortly.',
+    });
+
+    process.env.WEATHER_API_KEY = 'test-api-key';
+    const req = {
+      method: 'GET',
+      query: { lat: '51.5074', lon: '-0.1278' },
+    };
+    const res = createMockResponse();
+
+    await handler(req, res);
+
+    expect(enforceRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'GET' }),
+      'weather',
+    );
+    expect(res.status).toHaveBeenCalledWith(429);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Too many requests. Try again shortly.',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('returns 500 when the API key is not configured', async () => {
     delete process.env.WEATHER_API_KEY;
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -91,6 +143,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -120,6 +173,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '35.6762',
         lon: '139.6503',
@@ -142,6 +196,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '35.6762',
         lon: '139.6503',
@@ -166,6 +221,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -190,6 +246,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -214,6 +271,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -238,6 +296,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -262,6 +321,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
@@ -285,6 +345,7 @@ describe('weather API handler', () => {
     } as unknown as Response);
 
     const req = {
+      method: 'GET',
       query: {
         lat: '51.5074',
         lon: '-0.1278',
